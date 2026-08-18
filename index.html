@@ -1,0 +1,1101 @@
+<meta charset="utf-8">
+<title>부장님이 잠드셨다</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
+    font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+  #wrap{position:fixed;inset:0;display:grid;place-items:center;background:#0b1026}
+  canvas{width:min(100vw,calc(100vh*1.77778));max-height:100vh;display:block}
+  #touchNote{position:fixed;left:0;right:0;bottom:0;padding:10px 14px;text-align:center;
+    background:#1c2447;color:#ffd9a0;font-size:14px;display:none;z-index:9}
+</style>
+<div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
+<div id="touchNote">⌨️ 이 게임은 키보드 전용입니다. PC에서 플레이해 주세요.</div>
+<script>
+"use strict";
+/* ============================================================
+   부장님이 잠드셨다 — 회식 물리 협동 프로토타입 v0.1
+   1인(양손 연습) / 2인(키보드 분할) · 커스텀 Verlet 물리
+   ============================================================ */
+const cv = document.getElementById('cv'), cx = cv.getContext('2d');
+const VW = 1280, VH = 720;
+const clamp = (v,a,b)=>v<a?a:v>b?b:v;
+const lerp  = (a,b,t)=>a+(b-a)*t;
+const rnd   = (a,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
+const dist2 = (ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return Math.sqrt(dx*dx+dy*dy)};
+const DEBUG = location.search.indexOf('debug')>=0;
+if (matchMedia && matchMedia('(pointer: coarse)').matches)
+  document.getElementById('touchNote').style.display='block';
+
+/* ---------------- 입력 ---------------- */
+const keys = {}, pressed = {};
+const GAMEKEYS = new Set(['KeyA','KeyD','KeyW','KeyS','KeyF','ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
+  'ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyP','Escape','Enter','Digit1','Digit2','KeyK','Digit9','Digit0','Space']);
+window.addEventListener('keydown',e=>{
+  if (GAMEKEYS.has(e.code)) e.preventDefault();
+  if (!keys[e.code]) pressed[e.code]=true;
+  keys[e.code]=true; ensureAudio();
+});
+window.addEventListener('keyup',e=>{ keys[e.code]=false; });
+window.addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; if(state==='play') state='pause'; });
+let clickPt = null;
+cv.addEventListener('pointerdown',e=>{
+  const r=cv.getBoundingClientRect();
+  clickPt={x:(e.clientX-r.left)*VW/r.width, y:(e.clientY-r.top)*VH/r.height};
+  ensureAudio();
+});
+
+/* ---------------- 사운드 (전부 신스, 외부 파일 없음) ---------------- */
+let AC=null, master=null, scrapeGain=null, muted=false;
+function ensureAudio(){
+  if (AC) { if(AC.state==='suspended') AC.resume().catch(()=>{}); return; }
+  try{
+    AC = new (window.AudioContext||window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = 0.5; master.connect(AC.destination);
+    const len = AC.sampleRate*1.2, buf = AC.createBuffer(1,len,AC.sampleRate), d = buf.getChannelData(0);
+    for(let i=0;i<len;i++) d[i]=Math.random()*2-1;
+    const src=AC.createBufferSource(); src.buffer=buf; src.loop=true;
+    const bp=AC.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=420; bp.Q.value=0.8;
+    scrapeGain=AC.createGain(); scrapeGain.gain.value=0;
+    src.connect(bp); bp.connect(scrapeGain); scrapeGain.connect(master); src.start();
+  }catch(err){ AC=null; }
+}
+function tone(f0,f1,dur,type,vol,delay){
+  if(!AC||muted) return;
+  const t=AC.currentTime+(delay||0);
+  const o=AC.createOscillator(), g=AC.createGain();
+  o.type=type||'sine'; o.frequency.setValueAtTime(f0,t);
+  o.frequency.exponentialRampToValueAtTime(Math.max(20,f1),t+dur);
+  g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+0.02);
+}
+function noiseHit(dur,vol,freq){
+  if(!AC||muted) return;
+  const t=AC.currentTime, n=Math.floor(AC.sampleRate*dur), b=AC.createBuffer(1,n,AC.sampleRate), d=b.getChannelData(0);
+  for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n);
+  const s=AC.createBufferSource(); s.buffer=b;
+  const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=freq||500;
+  const g=AC.createGain(); g.gain.value=vol;
+  s.connect(f); f.connect(g); g.connect(master); s.start(t);
+}
+const sThud   = v=>{ noiseHit(0.1,Math.min(0.8,v),380); tone(90,45,0.14,'sine',0.4); };
+const sSnore  = ()=>{ tone(120,78,0.5,'sawtooth',0.06); tone(310,240,0.4,'sine',0.03,0.55); };
+const sGroan  = ()=>{ tone(170,70,0.55,'sawtooth',0.14); };
+const sMeow   = ()=>{ tone(880,520,0.18,'sine',0.16); tone(620,760,0.22,'sine',0.14,0.18); };
+const sSlip   = ()=>{ tone(600,260,0.16,'triangle',0.18); };
+const sKick   = ()=>{ noiseHit(0.06,0.35,2400); tone(1400,900,0.1,'square',0.06); };
+const sChime  = ()=>{ tone(880,880,0.14,'sine',0.14); tone(1318,1318,0.2,'sine',0.12,0.12); };
+const sBell   = ()=>{ tone(988,988,0.35,'sine',0.2); tone(784,784,0.5,'sine',0.16,0.3); };
+const sStamp  = ()=>{ noiseHit(0.12,0.7,300); tone(70,40,0.2,'sine',0.5); };
+const sJump   = ()=>{ tone(240,420,0.1,'sine',0.06); };
+const sFanfa  = ()=>{ [523,659,784,1047].forEach((f,i)=>tone(f,f,0.22,'triangle',0.14,i*0.13)); };
+
+/* ---------------- 월드 ---------------- */
+const G_Y = 580, WORLD = 7200, GOAL_X0 = 6600, GOAL_X1 = 7040, GOAL_CX = 6820;
+const GRAV = 2000, VG = 1900;
+const FDT = 1/60, SUB = 3, SDT = FDT/SUB, ITER = 6;
+
+const solids = [];
+function box(x,y,w,h,tag){ solids.push({x,y,w,h,tag:tag||''}); return solids[solids.length-1]; }
+box(-300, G_Y, WORLD+600, 240, 'ground');
+box(820,  G_Y-22, 260, 22, 'curb');
+box(1150, G_Y-114, 170, 66, 'banner');
+for(let i=0;i<3;i++) box(1560+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
+box(1698, G_Y-72, 462, 72, 'plate');
+for(let i=0;i<2;i++) box(2160+i*46, G_Y-(48-24*i), 46, 48-24*i, 'stair');
+box(3080, G_Y-22, 120, 22, 'curb');
+box(3260, G_Y-40, 140, 40, 'curb');
+for(let i=0;i<5;i++) box(3650+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
+box(3880, G_Y-120, 900, 24, 'bridge');
+for(let i=0;i<4;i++) box(4780+i*46, G_Y-(96-24*i), 46, 96-24*i, 'stair');
+box(4060, 350, 90, 62, 'lamp');
+box(4420, 350, 90, 62, 'lamp');
+box(5750, G_Y-114, 170, 66, 'banner');
+box(6150, G_Y-22, 200, 22, 'curb');
+
+const CHECKPOINTS = [{x:360},{x:3500},{x:5150}];
+const catZone = {x0:2700, x1:2980, catX:2860, spooked:false, runX:0};
+let bottles = [];
+function resetBottles(){ bottles=[{x:2470,k:false},{x:2515,k:false},{x:2552,k:false},{x:5470,k:false},{x:5510,k:false}]; }
+
+/* 배경 프리컴퓨트 */
+const starsA=[]; for(let i=0;i<90;i++) starsA.push({x:Math.random()*VW,y:Math.random()*380,r:Math.random()*1.4+0.4,tw:Math.random()*6});
+function mkBuildings(par, hMin,hMax, col){
+  const arr=[]; let x=-200;
+  while(x < WORLD*par+VW+400){
+    const w=rnd(90,220), h=rnd(hMin,hMax); const wins=[];
+    for(let wy=0; wy<h-30; wy+=34) for(let wx=10; wx<w-18; wx+=26)
+      if(Math.random()<0.32) wins.push({x:wx,y:wy});
+    arr.push({x,w,h,wins,col}); x+=w+rnd(6,60);
+  }
+  return arr;
+}
+const bldFar  = mkBuildings(0.25, 120,300, '#131a36');
+const bldNear = mkBuildings(0.55, 180,380, '#171f40');
+const lampXs = [600,1400,2250,2950,3550,5100,5900,6500];
+
+/* ---------------- Verlet 물리 ---------------- */
+function P(x,y,m,r){ return {x,y,px:x,py:y,m:m||1,r:r||5.5,hitCd:0,onGround:false}; }
+function S(a,b,stiff,mode){ return {a,b,rest:dist2(a.x,a.y,b.x,b.y),stiff:stiff||1,mode:mode||0}; }
+
+let boss = null;
+function buildBoss(ax,ay,bx,by){
+  const L=lerp, hx=ax, hy=ay;
+  const lh=P(hx-4,hy,0.7,5), rh=P(hx+4,hy,0.7,5);
+  const le=P(L(ax,bx,0.14),ay+7,0.9,5), re=P(L(ax,bx,0.14),ay+10,0.9,5);
+  const neck=P(L(ax,bx,0.3),ay+13,1.2,6);
+  const head=P(neck.x+9,neck.y+16,1.6,15);
+  const chest=P(L(ax,bx,0.46),ay+16,2.6,11);
+  const pelvis=P(L(ax,bx,0.63),ay+16,2.6,11);
+  const lk=P(L(ax,bx,0.8),ay+10,0.9,5.5), rk=P(L(ax,bx,0.8),ay+7,0.9,5.5);
+  const la=P(bx-4,by,0.7,5), ra=P(bx+4,by,0.7,5);
+  const pts={lh,rh,le,re,neck,head,chest,pelvis,lk,rk,la,ra};
+  const sticks=[
+    S(lh,le),S(rh,re),S(le,neck),S(re,neck),
+    S(neck,head),S(neck,chest),S(chest,pelvis),
+    S(pelvis,lk),S(pelvis,rk),S(lk,la),S(rk,ra),
+    S(lh,rh),S(la,ra),
+    S(neck,pelvis,0.85),
+    S(head,chest,1,1),
+    S(pelvis,la,0.9,1),S(pelvis,ra,0.9,1),
+    S(neck,lh,0.6,2),S(neck,rh,0.6,2)
+  ];
+  boss = {pts, sticks, list:Object.values(pts),
+    headEnd:[head,neck,chest,lh,rh,le,re],
+    tailEnd:[pelvis,lk,rk,la,ra]};
+}
+function bossVel(p){ return dist2(p.x,p.y,p.px,p.py)/SDT; }
+function setVel(p,vx,vy){ p.px=p.x-vx*SDT; p.py=p.y-vy*SDT; }
+
+function collidePt(p){
+  for(const s of solids){
+    const nx=clamp(p.x,s.x,s.x+s.w), ny=clamp(p.y,s.y,s.y+s.h);
+    let dx=p.x-nx, dy=p.y-ny, d=Math.sqrt(dx*dx+dy*dy);
+    if(d>=p.r) continue;
+    const spd=p.spd||0, vy=(p.y-p.py)/SDT;
+    if(d>0.0001){
+      // 모서리 관용: 옆에서 밀렸는데 윗면 근처면 위로 올려보냄
+      if(Math.abs(dx)>Math.abs(dy) && p.y-p.r < s.y+14 && vy>=-40){ p.y=s.y-p.r; }
+      else { p.x=nx+dx/d*p.r; p.y=ny+dy/d*p.r; }
+    } else {
+      const upPen=p.y-s.y+p.r, downPen=s.y+s.h-p.y+p.r, lPen=p.x-s.x+p.r, rPen=s.x+s.w-p.x+p.r;
+      const m=Math.min(upPen,downPen,lPen,rPen);
+      if(m===upPen) p.y=s.y-p.r; else if(m===downPen) p.y=s.y+s.h+p.r;
+      else if(m===lPen) p.x=s.x-p.r; else p.x=s.x+s.w+p.r;
+    }
+    if(p.y<=s.y){ p.onGround=true; }
+    // 마찰 + 반발 제거
+    p.px = p.x-(p.x-p.px)*0.55;
+    p.py = p.y;
+    if(spd>620 && p.hitCd<=0){
+      p.hitCd=0.5;
+      onBossImpact(p, spd);
+    }
+  }
+}
+function stepBossPhysics(){
+  for(const p of boss.list){
+    const vx=(p.x-p.px)*0.996, vy=(p.y-p.py)*0.996;
+    p.px=p.x; p.py=p.y;
+    let ddx=vx, ddy=vy+VG*SDT*SDT;
+    const mm=Math.sqrt(ddx*ddx+ddy*ddy);
+    if(mm>30){ ddx*=30/mm; ddy*=30/mm; }
+    p.x+=ddx; p.y+=ddy;
+    p.spd=Math.sqrt(ddx*ddx+ddy*ddy)/SDT; // 제약 적용 전 실제 속도(충격 판정용)
+    p.onGround=false;
+  }
+  // 그립 핀
+  for(const c of carriers) c.applyGrip();
+  for(let it=0; it<ITER; it++){
+    for(const st of boss.sticks){
+      const a=st.a,b=st.b;
+      let dx=b.x-a.x, dy=b.y-a.y, d=Math.sqrt(dx*dx+dy*dy)||0.0001;
+      if(st.mode===1 && d>=st.rest*0.8) continue;
+      if(st.mode===2 && d<=st.rest*1.15) continue;
+      const target=st.mode===1?st.rest*0.8:(st.mode===2?st.rest*1.15:st.rest);
+      const diff=(d-target)/d*0.5*st.stiff;
+      const wa=b.m/(a.m+b.m), wb=a.m/(a.m+b.m);
+      a.x+=dx*diff*wa*2*0.5; a.y+=dy*diff*wa;
+      b.x-=dx*diff*wb; b.y-=dy*diff*wb;
+    }
+    for(const c of carriers) c.applyGrip();
+    for(const p of boss.list) collidePt(p);
+  }
+  for(const p of boss.list) if(p.hitCd>0) p.hitCd-=SDT;
+  if(!isFinite(boss.pts.chest.x)||!isFinite(boss.pts.chest.y)) respawn(false);
+}
+
+/* ---------------- 운반자(캐리어) ---------------- */
+class Carrier{
+  constructor(role,x,color,keymap,label){
+    this.role=role; this.color=color; this.km=keymap; this.label=label;
+    this.reset(x);
+  }
+  reset(x){
+    this.x=x; this.y=G_Y-58; this.w=26; this.h=58;
+    this.vx=0; this.vy=0; this.facing=1; this.crouch=false; this.grounded=true;
+    this.grip=true; this.stretch=0; this.slipT=0; this.walkPh=0; this.regrabHint=false;
+  }
+  anchor(){
+    const off = this.role==='front' ? -20 : 20;
+    return {x:this.x+this.w/2+off, y:this.y+(this.crouch?10:5)};
+  }
+  targets(){
+    return this.role==='front' ? [boss.pts.lh,boss.pts.rh] : [boss.pts.la,boss.pts.ra];
+  }
+  midTarget(){
+    const t=this.targets();
+    return {x:(t[0].x+t[1].x)/2, y:(t[0].y+t[1].y)/2};
+  }
+  applyGrip(){
+    if(!this.grip||!boss) return;
+    const an=this.anchor(), t=this.targets();
+    const m=this.midTarget();
+    const st=dist2(an.x,an.y,m.x,m.y);
+    if(st>this.stretch) this.stretch=st;
+    const k=0.42;
+    t[0].x+=(an.x-4-t[0].x)*k; t[0].y+=(an.y-t[0].y)*k;
+    t[1].x+=(an.x+4-t[1].x)*k; t[1].y+=(an.y-t[1].y)*k;
+  }
+  update(dt){
+    const k=this.km;
+    let dir=0; if(keys[k.L])dir--; if(keys[k.R])dir++;
+    this.crouch = !!keys[k.C] && this.grounded;
+    const carrying=this.grip;
+    const stretchDrag = 1 - clamp((this.stretch-45)/70,0,0.55);
+    const maxS=(carrying?205:268)*(this.crouch?0.6:1)*stretchDrag;
+    const target=dir*maxS;
+    const acc = 1700*dt;
+    this.vx += clamp(target-this.vx, -acc, acc);
+    if(dir!==0) this.facing=dir;
+    let jumped=false;
+    for(const jk of k.J){ if(pressed[jk]) jumped=true; }
+    if(jumped && this.grounded){
+      this.vy = carrying?-650:-730; this.grounded=false; sJump();
+    }
+    this.vy += GRAV*dt; this.vy=clamp(this.vy,-2000,1400);
+    // 자세 전환(발 위치 유지)
+    const th=this.crouch?42:58;
+    if(th!==this.h){
+      const ny=this.y+(this.h-th);
+      if(th>this.h && this.hitsSolid(this.x,ny,this.w,th)) { /* 천장 → 못 일어남 */ this.crouch=true; }
+      else { this.y=ny; this.h=th; }
+    }
+    // X 이동
+    this.x += this.vx*dt;
+    for(const s of solids){
+      if(!this.overlap(s)) continue;
+      const feet=this.y+this.h;
+      if(feet-s.y<=27 && this.vy>=0 && !this.hitsSolid(this.x, s.y-this.h, this.w, this.h)){
+        this.y=s.y-this.h; this.grounded=true;
+      } else {
+        if(this.vx>0) this.x=s.x-this.w; else if(this.vx<0) this.x=s.x+s.w;
+        this.vx=0;
+      }
+    }
+    this.x=clamp(this.x,-260,WORLD-40);
+    // Y 이동
+    this.y += this.vy*dt;
+    this.grounded=false;
+    for(const s of solids){
+      if(!this.overlap(s)) continue;
+      if(this.vy>=0 && this.y+this.h-s.y < Math.max(30,this.vy*dt+12)){
+        this.y=s.y-this.h; this.vy=0; this.grounded=true;
+      } else if(this.vy<0){
+        this.y=s.y+s.h; this.vy=0;
+      } else {
+        if(this.vx>=0) this.x=s.x-this.w; else this.x=s.x+s.w;
+      }
+    }
+    // 그립 토글
+    let gPressed=false;
+    for(const gk of k.G){ if(pressed[gk]) gPressed=true; }
+    const m=this.midTarget(), an=this.anchor();
+    const near=dist2(an.x,an.y,m.x,m.y)<64;
+    this.regrabHint = !this.grip && near;
+    if(gPressed){
+      if(this.grip){ this.grip=false; addFault(this.side(),5,'release'); sSlip(); toast(this.label+'가 손을 놓았다!'); }
+      else if(near){ this.grip=true; sChime(); }
+    }
+    // 과신전 슬립
+    if(this.grip && this.stretch>95){ this.slipT+=dt; if(this.slipT>0.12){
+      this.grip=false; this.slipT=0; addFault(this.side(),12,'slip'); sSlip();
+      toast('⚠ '+this.label+' 손이 미끄러졌다!'); shake=8;
+    }} else this.slipT=0;
+    this.walkPh += Math.abs(this.vx)*dt*0.05;
+    this.stretchShown=this.stretch; this.stretch=0;
+  }
+  side(){ return this.role==='front'?'front':'back'; }
+  overlap(s){ return this.x<s.x+s.w && this.x+this.w>s.x && this.y<s.y+s.h && this.y+this.h>s.y; }
+  hitsSolid(x,y,w,h){
+    for(const s of solids) if(x<s.x+s.w&&x+w>s.x&&y<s.y+s.h&&y+h>s.y) return true;
+    return false;
+  }
+}
+const KM_BACK  = {L:'KeyA',R:'KeyD',C:'KeyS',J:['KeyW'],G:['KeyF']};
+const KM_FRONT = {L:'ArrowLeft',R:'ArrowRight',C:'ArrowDown',J:['ArrowUp'],G:['ShiftRight','KeyL']};
+let carriers=[];
+
+/* ---------------- 게임 상태 ---------------- */
+let state='title', mode=null, diff={dmg:1,drain:1,par:220};
+let meter=100, runTime=0, noiseCnt=0, wakeCnt=0, cpIdx=0;
+let faults={front:{total:0,reasons:{}}, back:{total:0,reasons:{}}};
+let shake=0, camX=0, timeScale=1, slowT=0;
+let nextStir=0, stirWarnT=0, stirPending=null, snoreT=0, calmT=0;
+let dragNoiseT=0, sinceDmg=99, lastWakeLine='', lastRemainM=0;
+let clearT=-1, wakeAnimT=0, gradeInfo=null, toasts=[], particles=[], bossBubble=null;
+let titleT=0;
+const REASON_KO = {release:'손을 스스로 놓아버림', slip:'무리하게 당겨 손이 미끄러짐',
+  impact:'낙하 충격 유발', drag:'부장님을 바닥에 끌고 다님', cat:'고양이를 놀라게 함',
+  bottle:'소주병을 걷어참', abandon:'부장님을 길에 방치함'};
+const SLEEPTALK=['으음… 김대리… 그 보고서는…','한 잔만… 딱 한 잔만 더…','우리 팀은… 가족이야…','라떼는… 말이야…','으어… 2차… 2차 가야지…','…내가 다 책임진다니까…'];
+const WAKELINES=['야!! 여기가 어디야!!','김대리… 자네 지금 뭐 하는 건가…','내 구두!! 내 구두 어디 갔어!!','자네들, 내일 아침에 보자.','이게 지금 몇 시야!!'];
+
+function addFault(side,amt,reason){
+  const f=faults[side]; f.total+=amt; f.reasons[reason]=(f.reasons[reason]||0)+amt;
+}
+function toast(txt){ toasts.push({txt,t:0}); if(toasts.length>3) toasts.shift(); }
+function spawnP(type,x,y,txt){ particles.push({type,x,y,vx:rnd(-30,30),vy:rnd(-70,-30),t:0,txt}); }
+
+function onBossImpact(p,spd){
+  if(state!=='play') return;
+  const isHead = p===boss.pts.head;
+  let dmg = Math.min(24,(spd-620)/46) * (isHead?1.7:1) * diff.dmg;
+  if(dmg<=0) return;
+  meter -= dmg; sinceDmg=0;
+  sThud(Math.min(0.8, dmg/12));
+  shake=Math.max(shake, Math.min(14,dmg*1.2));
+  const side = boss.headEnd.indexOf(p)>=0 ? 'front':'back';
+  addFault(side, dmg, 'impact');
+  if(dmg>5){
+    noiseCnt++;
+    spawnP('text',p.x,p.y-24,'쿵!');
+    for(let i=0;i<4;i++) spawnP('star',p.x,p.y-10);
+    if(isHead) bossSay('으윽…!',1.2);
+  }
+}
+function bossSay(txt,dur){ bossBubble={txt,t:0,dur:dur||2.2}; }
+
+function startGame(m){
+  mode=m;
+  diff = m==='solo' ? {dmg:0.72,drain:0.72,par:280} : {dmg:1,drain:1,par:220};
+  runTime=0; noiseCnt=0; wakeCnt=0; cpIdx=0;
+  faults={front:{total:0,reasons:{}}, back:{total:0,reasons:{}}};
+  resetBottles(); catZone.spooked=false;
+  meter=100; clearT=-1; gradeInfo=null; toasts=[]; particles=[];
+  respawn(true); state='play';
+  nextStir=runTime+rnd(14,22);
+  toast(m==='solo'?'연습 모드: 왼손이 뒷사람, 오른손이 앞사람!':'협동 모드: 서로 탓할 준비 되셨습니까');
+}
+function respawn(fullMeter){
+  const cp=CHECKPOINTS[cpIdx];
+  carriers=[
+    new Carrier('back',  cp.x,     '#4f8ef7', KM_BACK,  '뒷사람'),
+    new Carrier('front', cp.x+150, '#3ec9a7', KM_FRONT, '앞사람')
+  ];
+  const f=carriers[1].anchor(), b=carriers[0].anchor();
+  buildBoss(f.x,f.y,b.x,b.y);
+  if(fullMeter!==false) meter = wakeCnt===0?100:66;
+  timeScale=1; slowT=0; bossBubble=null;
+}
+
+/* ---------------- 업데이트 ---------------- */
+function update(dt){
+  if(state!=='play') return;
+  runTime+=dt; sinceDmg+=dt;
+
+  for(const c of carriers) c.update(dt);
+  // 캐리어끼리 겹침 방지(몸이 접혀 떨리는 것 방지)
+  {
+    const a=carriers[0], b=carriers[1], dxc=b.x-a.x, gap=44;
+    if(Math.abs(dxc)<gap){
+      const push=(gap-Math.abs(dxc))/2*(dxc>=0?1:-1);
+      a.x-=push; b.x+=push;
+    }
+  }
+  for(let s=0;s<SUB;s++) stepBossPhysics();
+
+  const chest=boss.pts.chest, pelvis=boss.pts.pelvis, head=boss.pts.head;
+  const anyGrip = carriers.some(c=>c.grip);
+  const avgSpd = (Math.abs(carriers[0].vx)+Math.abs(carriers[1].vx))/2;
+
+  // 끌기(드래그) 판정
+  const touching = chest.onGround||pelvis.onGround||head.onGround;
+  if(anyGrip && touching && avgSpd>90){
+    meter -= 4.5*dt*diff.drain; sinceDmg=0;
+    if(scrapeGain&&!muted) scrapeGain.gain.value=Math.min(0.12,avgSpd/2200);
+    dragNoiseT+=dt;
+    if(dragNoiseT>1.1){ dragNoiseT=0; noiseCnt++;
+      const side = head.onGround||chest.onGround?'front':'back';
+      addFault(side,3,'drag');
+      spawnP('text',pelvis.x,pelvis.y-20,'드르륵…');
+    }
+  } else if(scrapeGain) scrapeGain.gain.value*=0.8;
+
+  // 방치 판정
+  if(!anyGrip){
+    const near=Math.min(dist2(carriers[0].x,carriers[0].y,chest.x,chest.y),
+                        dist2(carriers[1].x,carriers[1].y,chest.x,chest.y));
+    if(near>430 && !(chest.x>GOAL_X0)){
+      meter-=2.5*dt*diff.drain;
+      if(Math.random()<dt*0.5) addFault(carriers[0].x>carriers[1].x?'back':'front',1,'abandon');
+    }
+  }
+
+  // 고양이
+  if(!catZone.spooked){
+    for(const c of carriers){
+      if(c.x>catZone.x0&&c.x<catZone.x1&&Math.abs(c.vx)>130){
+        catZone.spooked=true; catZone.runX=catZone.catX;
+        sMeow(); meter-=8*diff.drain; noiseCnt++; sinceDmg=0;
+        addFault(c.side(),8,'cat'); shake=7;
+        toast('🐈 고양이가 기겁했다!! ('+c.label+' 과실)');
+        bossSay('…읏, 시끄러…',1.6);
+      }
+    }
+  } else if(catZone.runX>-200) catZone.runX-=520*dt;
+
+  // 소주병
+  for(const b of bottles){
+    if(b.k) continue;
+    for(const c of carriers){
+      if(Math.abs(c.x+c.w/2-b.x)<20 && Math.abs(c.vx)>90 && c.grounded){
+        b.k=true; sKick(); meter-=4*diff.drain; noiseCnt++; sinceDmg=0;
+        addFault(c.side(),4,'bottle');
+        spawnP('bottle',b.x,G_Y-10); spawnP('text',b.x,G_Y-40,'쨍그랑!');
+      }
+    }
+  }
+
+  // 체크포인트
+  for(let i=cpIdx+1;i<CHECKPOINTS.length;i++){
+    if(chest.x>CHECKPOINTS[i].x){ cpIdx=i; sChime(); toast('📍 체크포인트! 부장님이 편안해 보인다'); }
+  }
+
+  // 뒤척임 이벤트
+  if(stirPending===null && runTime>nextStir){
+    stirPending = Math.random()<0.45 ? 'flail':'talk';
+    stirWarnT=1.25;
+    bossSay('으으음…',1.2);
+  }
+  if(stirPending!==null){
+    stirWarnT-=dt;
+    if(stirWarnT<=0){
+      if(stirPending==='flail'){
+        sGroan(); shake=9;
+        setVel(chest,rnd(-240,240),-rnd(180,300));
+        setVel(pelvis,rnd(-240,240),-rnd(120,260));
+        for(const p of [boss.pts.la,boss.pts.ra,boss.pts.lh,boss.pts.rh]) setVel(p,rnd(-320,320),-rnd(100,320));
+        bossSay('부스럭…!!',1.4);
+        toast('부장님이 크게 뒤척였다!');
+      } else {
+        sSnore(); bossSay(SLEEPTALK[(Math.random()*SLEEPTALK.length)|0],2.6);
+      }
+      stirPending=null;
+      nextStir=runTime+rnd(18,32)*(meter<35?0.6:1);
+    }
+  }
+
+  // 코골이
+  if(sinceDmg>2.5){
+    snoreT+=dt;
+    if(snoreT>2.3){ snoreT=0; sSnore(); spawnP('z',head.x,head.y-20); }
+  }
+
+  // 기상(게임오버)
+  meter=clamp(meter,0,100);
+  if(meter<=0 && state==='play'){
+    wakeCnt++; slowT=0.9; timeScale=0.25;
+    lastWakeLine=WAKELINES[(Math.random()*WAKELINES.length)|0];
+    lastRemainM=Math.max(0,Math.round((GOAL_CX-chest.x)/10));
+    wakeAnimT=0;
+    setTimeout(()=>{},0);
+    state='wake'; sGroan(); sThud(0.8);
+  }
+
+  // 클리어 판정
+  if(state==='play' && chest.x>GOAL_X0 && chest.x<GOAL_X1 && !anyGrip){
+    const spd=bossVel(chest);
+    const grounded=chest.onGround||pelvis.onGround;
+    if(spd<70 && grounded){
+      state='clear'; clearT=0; sBell();
+      const par=diff.par;
+      let pts=100 - wakeCnt*25 - Math.max(0,noiseCnt-2)*4 - Math.max(0,runTime-par)*0.2;
+      let g,cap;
+      if(pts>=90&&wakeCnt===0){g='S';cap='차기 임원감. 부장님이 아침에 해장국을 쏜다.';}
+      else if(pts>=75){g='A';cap='"자네만 믿네." — 두터운 신임을 얻었다.';}
+      else if(pts>=58){g='B';cap='무난한 직장생활이 이어진다.';}
+      else if(pts>=40){g='C';cap='월요일 아침, 어쩐지 눈치가 보인다.';}
+      else if(pts>=22){g='D';cap='사내에 팀 이동설이 돈다.';}
+      else {g='F';cap='지방 발령. 조용히 짐을 싸자.';}
+      gradeInfo={g,cap,pts:Math.round(pts)};
+    }
+  }
+
+  // 카메라
+  const midX=(carriers[0].x+carriers[1].x)/2;
+  camX = lerp(camX, clamp(midX-560, 0, WORLD-VW), 0.12);
+  if(shake>0) shake=Math.max(0,shake-40*dt);
+
+  // 파티클/토스트/말풍선
+  for(const p of particles){ p.t+=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; if(p.type==='star'||p.type==='bottle'){p.vy+=900*dt;} }
+  particles=particles.filter(p=>p.t<1.4);
+  for(const t of toasts) t.t+=dt;
+  toasts=toasts.filter(t=>t.t<3.2);
+  if(bossBubble){ bossBubble.t+=dt; if(bossBubble.t>bossBubble.dur) bossBubble=null; }
+
+  // 디버그
+  if(DEBUG){
+    if(pressed['KeyK']) meter-=15;
+    if(pressed['Digit0']) meter=100;
+    if(pressed['Digit9']){
+      const dx=600;
+      for(const c of carriers) c.x+=dx;
+      for(const p of boss.list){ p.x+=dx; p.px+=dx; }
+    }
+  }
+}
+
+/* ---------------- 렌더링 ---------------- */
+function draw(){
+  cx.save();
+  cx.clearRect(0,0,VW,VH);
+  const sky=cx.createLinearGradient(0,0,0,VH);
+  sky.addColorStop(0,'#0b1026'); sky.addColorStop(0.62,'#141b3d'); sky.addColorStop(1,'#1c2447');
+  cx.fillStyle=sky; cx.fillRect(0,0,VW,VH);
+
+  // 별/달
+  for(const s of starsA){
+    cx.globalAlpha=0.4+0.4*Math.sin(titleT*1.5+s.tw);
+    cx.fillStyle='#dfe6ff'; cx.beginPath(); cx.arc(s.x,s.y,s.r,0,7); cx.fill();
+  }
+  cx.globalAlpha=1;
+  cx.fillStyle='#ffe9b8'; cx.beginPath(); cx.arc(1080,110,44,0,7); cx.fill();
+  cx.fillStyle='rgba(255,233,184,0.12)'; cx.beginPath(); cx.arc(1080,110,74,0,7); cx.fill();
+  cx.fillStyle='#0e1330'; cx.beginPath(); cx.arc(1062,98,12,0,7); cx.fill();
+  cx.beginPath(); cx.arc(1096,124,8,0,7); cx.fill();
+
+  const shx=(Math.random()*2-1)*shake, shy=(Math.random()*2-1)*shake;
+
+  // 원경 빌딩
+  drawBuildings(bldFar, 0.25);
+  drawBuildings(bldNear, 0.55);
+
+  cx.save();
+  cx.translate(-camX+shx, shy);
+
+  drawLevel();
+  drawDecos();
+  if(boss) drawBoss();
+  for(const c of carriers) drawCarrier(c);
+  drawParticles();
+  cx.restore();
+
+  if(state==='play'||state==='pause') drawHUD();
+  if(state==='title') drawTitle();
+  if(state==='wake') drawWake();
+  if(state==='clear') drawClear();
+  if(state==='pause') drawPause();
+  cx.restore();
+}
+function drawBuildings(arr,par){
+  cx.save(); cx.translate(-camX*par,0);
+  for(const b of arr){
+    if(b.x+b.w<camX*par-50||b.x>camX*par+VW+50) continue;
+    cx.fillStyle=b.col; cx.fillRect(b.x, G_Y-b.h, b.w, b.h+40);
+    cx.fillStyle='rgba(255,214,140,0.5)';
+    for(const w of b.wins) cx.fillRect(b.x+w.x, G_Y-b.h+14+w.y, 10, 14);
+  }
+  cx.restore();
+}
+function roundRect(x,y,w,h,r){
+  cx.beginPath(); cx.moveTo(x+r,y);
+  cx.arcTo(x+w,y,x+w,y+h,r); cx.arcTo(x+w,y+h,x,y+h,r);
+  cx.arcTo(x,y+h,x,y,r); cx.arcTo(x,y,x+w,y,r); cx.closePath();
+}
+function drawLevel(){
+  for(const s of solids){
+    if(s.x+s.w<camX-60||s.x>camX+VW+60) continue;
+    if(s.tag==='ground'){
+      cx.fillStyle='#23262e'; cx.fillRect(s.x,s.y,s.w,s.h);
+      cx.fillStyle='#2e3340'; cx.fillRect(s.x,s.y,s.w,26);
+      cx.fillStyle='#3a4152';
+      for(let x=Math.floor(camX/64)*64; x<camX+VW+64; x+=64) cx.fillRect(x,s.y,2,26);
+      cx.fillStyle='#454d63'; cx.fillRect(s.x,s.y,s.w,3);
+    } else if(s.tag==='banner'){
+      cx.fillStyle='#5b6b8c'; cx.fillRect(s.x-8,s.y-46,8,s.h+160-(G_Y-s.y-s.h)+46);
+      cx.fillRect(s.x+s.w,s.y-46,8,G_Y-(s.y-46));
+      cx.fillStyle='#c8553d';
+      cx.beginPath();
+      cx.moveTo(s.x,s.y+6); cx.quadraticCurveTo(s.x+s.w/2,s.y-8,s.x+s.w,s.y+6);
+      cx.lineTo(s.x+s.w,s.y+s.h-6); cx.quadraticCurveTo(s.x+s.w/2,s.y+s.h+8,s.x,s.y+s.h-6);
+      cx.closePath(); cx.fill();
+      cx.fillStyle='#ffe9d6'; cx.font='bold 17px sans-serif'; cx.textAlign='center';
+      cx.fillText('경축! 제 47회 명진마을 척사대회', s.x+s.w/2, s.y+s.h/2+6);
+    } else if(s.tag==='lamp'){
+      cx.fillStyle='#39415c'; cx.fillRect(s.x+s.w/2-4, 250, 8, s.y-250);
+      cx.fillStyle='#ffd45e'; roundRect(s.x,s.y,s.w,s.h,10); cx.fill();
+      cx.fillStyle='rgba(255,212,94,0.14)';
+      cx.beginPath(); cx.moveTo(s.x,s.y+s.h); cx.lineTo(s.x+s.w,s.y+s.h);
+      cx.lineTo(s.x+s.w+50,G_Y-120); cx.lineTo(s.x-50,G_Y-120); cx.closePath(); cx.fill();
+      cx.fillStyle='#1c2447'; cx.font='bold 13px sans-serif'; cx.textAlign='center';
+      cx.fillText('육교 조명', s.x+s.w/2, s.y+s.h/2+4);
+    } else if(s.tag==='bridge'){
+      cx.fillStyle='#3d4560'; cx.fillRect(s.x,s.y,s.w,s.h);
+      cx.fillStyle='#4d5675'; cx.fillRect(s.x,s.y,s.w,5);
+      cx.strokeStyle='#4d5675'; cx.lineWidth=4;
+      for(let x=s.x; x<=s.x+s.w; x+=60){
+        cx.beginPath(); cx.moveTo(x,s.y); cx.lineTo(x,s.y-40); cx.stroke();
+      }
+      cx.strokeStyle='#5a6488'; cx.beginPath(); cx.moveTo(s.x,s.y-40); cx.lineTo(s.x+s.w,s.y-40); cx.stroke();
+      cx.lineWidth=1;
+    } else {
+      cx.fillStyle='#333a4d'; cx.fillRect(s.x,s.y,s.w,s.h);
+      cx.fillStyle='#454d63'; cx.fillRect(s.x,s.y,s.w,4);
+    }
+  }
+}
+function neon(x,y,txt,col,size){
+  cx.font='bold '+(size||22)+'px sans-serif'; cx.textAlign='center';
+  cx.shadowColor=col; cx.shadowBlur=16;
+  cx.fillStyle=col; cx.fillText(txt,x,y);
+  cx.shadowBlur=0;
+}
+function drawDecos(){
+  // 회식집
+  cx.fillStyle='#1f2750'; cx.fillRect(40,G_Y-190,330,190);
+  cx.fillStyle='#141a36'; cx.fillRect(60,G_Y-160,80,60); cx.fillRect(160,G_Y-160,80,60);
+  cx.fillStyle='rgba(255,178,84,0.85)'; cx.fillRect(60,G_Y-90,180,70);
+  const flick = Math.sin(titleT*7)>-0.85?1:0.4;
+  cx.globalAlpha=flick; neon(200,G_Y-205,'명진갈비',' #ff5d8f'.trim(),26); cx.globalAlpha=1;
+  neon(320,G_Y-120,'2차 노래방','#7c6cff',15);
+  // 해장국집
+  cx.fillStyle='#1f2750'; cx.fillRect(5200,G_Y-170,260,170);
+  neon(5330,G_Y-185,'24시 해장국','#ffd45e',22);
+  // 전봇대(체크포인트)
+  for(const cp of CHECKPOINTS){
+    if(cp.x<400) continue;
+    cx.fillStyle='#39415c'; cx.fillRect(cp.x-5,G_Y-240,10,240);
+    cx.fillStyle='#2c3350'; cx.fillRect(cp.x-26,G_Y-226,52,8);
+    const on = CHECKPOINTS.indexOf(cp)<=cpIdx;
+    cx.fillStyle=on?'#7dffa8':'#39415c';
+    cx.beginPath(); cx.arc(cp.x,G_Y-250,7,0,7); cx.fill();
+    if(on){ cx.fillStyle='rgba(125,255,168,0.1)'; cx.beginPath(); cx.arc(cp.x,G_Y-250,26,0,7); cx.fill(); }
+  }
+  // 벤치
+  cx.fillStyle='#6b4f35'; cx.fillRect(5250,G_Y-34,110,10);
+  cx.fillStyle='#54483c'; cx.fillRect(5258,G_Y-24,10,24); cx.fillRect(5342,G_Y-24,10,24);
+  // 소주병
+  for(const b of bottles){
+    if(b.k) continue;
+    cx.fillStyle='#3fae6b'; cx.fillRect(b.x-4,G_Y-18,8,18);
+    cx.fillRect(b.x-2,G_Y-24,4,7);
+  }
+  // 고양이
+  const catx = catZone.spooked?catZone.runX:catZone.catX;
+  if(catx>-100){
+    cx.fillStyle='#191d2c';
+    cx.beginPath(); cx.ellipse(catx,G_Y-11,16,10,0,0,7); cx.fill();
+    cx.beginPath(); cx.arc(catx+13,G_Y-19,7,0,7); cx.fill();
+    cx.beginPath(); cx.moveTo(catx+9,G_Y-24); cx.lineTo(catx+12,G_Y-31); cx.lineTo(catx+15,G_Y-24); cx.fill();
+    cx.beginPath(); cx.moveTo(catx+15,G_Y-24); cx.lineTo(catx+18,G_Y-30); cx.lineTo(catx+20,G_Y-23); cx.fill();
+    const tw=Math.sin(titleT*3)*6;
+    cx.strokeStyle='#191d2c'; cx.lineWidth=4;
+    cx.beginPath(); cx.moveTo(catx-14,G_Y-14); cx.quadraticCurveTo(catx-24,G_Y-22+tw,catx-20,G_Y-32+tw); cx.stroke();
+    cx.lineWidth=1;
+    cx.fillStyle='#9dff8a'; cx.fillRect(catx+11,G_Y-21,2.5,3); cx.fillRect(catx+16,G_Y-21,2.5,3);
+    if(catZone.spooked&&catx>0){ cx.font='bold 16px sans-serif'; cx.fillStyle='#fff'; cx.fillText('!!',catx,G_Y-42); }
+  }
+  // 아파트 현관(골)
+  cx.fillStyle='#242c52'; cx.fillRect(6660,G_Y-320,540,320);
+  cx.fillStyle='rgba(255,214,140,0.5)';
+  for(let fy=0; fy<4; fy++) for(let fx=0; fx<5; fx++)
+    if((fx*7+fy*3)%3!==0) cx.fillRect(6690+fx*104, G_Y-300+fy*66, 30, 24);
+  const doorLit = state==='clear'&&clearT>0.7;
+  cx.fillStyle='#39415c'; cx.fillRect(6780,G_Y-130,110,130);
+  cx.fillStyle=doorLit?'#ffdf9e':'#141a36'; cx.fillRect(6790,G_Y-120,90,120);
+  cx.fillStyle='#242c52'; cx.fillRect(6830,G_Y-70,8,16);
+  cx.fillStyle='#e8ecff'; cx.font='bold 15px sans-serif'; cx.textAlign='center';
+  cx.fillText('명진아파트 101동',6835,G_Y-146);
+  // 골 존 표시
+  if(state==='play'){
+    cx.fillStyle='rgba(125,255,168,'+(0.06+0.04*Math.sin(titleT*3))+')';
+    cx.fillRect(GOAL_X0,G_Y-180,GOAL_X1-GOAL_X0,180);
+    cx.fillStyle='#7dffa8'; cx.font='bold 15px sans-serif';
+    cx.fillText('▼ 여기 내려놓기 (그립 F / Shift 해제)',(GOAL_X0+GOAL_X1)/2,G_Y-190);
+  }
+}
+function capsule(a,b,w,col){
+  cx.strokeStyle=col; cx.lineWidth=w; cx.lineCap='round';
+  cx.beginPath(); cx.moveTo(a.x,a.y); cx.lineTo(b.x,b.y); cx.stroke();
+}
+function drawBoss(){
+  const p=boss.pts;
+  capsule(p.pelvis,p.lk,15,'#525b74'); capsule(p.lk,p.la,13,'#525b74');
+  capsule(p.pelvis,p.rk,15,'#5c6685'); capsule(p.rk,p.ra,13,'#5c6685');
+  cx.fillStyle='#22273c';
+  for(const f of [p.la,p.ra]){ cx.beginPath(); cx.ellipse(f.x,f.y,9,6,0,0,7); cx.fill(); }
+  capsule(p.neck,p.chest,24,'#8a93a8'); capsule(p.chest,p.pelvis,26,'#8a93a8');
+  const bx=(p.chest.x+p.pelvis.x)/2, by=(p.chest.y+p.pelvis.y)/2;
+  cx.fillStyle='#eef1f8'; cx.beginPath(); cx.arc(bx,by+2,13,0,7); cx.fill();
+  cx.fillStyle='#8a93a8'; cx.beginPath(); cx.arc(bx,by+2,13,-1.9,1.2); cx.fill();
+  capsule(p.neck,p.le,11,'#7d8699'); capsule(p.le,p.lh,10,'#7d8699');
+  capsule(p.neck,p.re,11,'#98a2b8'); capsule(p.re,p.rh,10,'#98a2b8');
+  cx.fillStyle='#f0b6a0';
+  for(const h of [p.lh,p.rh]){ cx.beginPath(); cx.arc(h.x,h.y,5.5,0,7); cx.fill(); }
+  // 넥타이(중력 방향으로 대롱대롱)
+  cx.strokeStyle='#c8553d'; cx.lineWidth=7; cx.lineCap='round';
+  cx.beginPath(); cx.moveTo(p.neck.x,p.neck.y);
+  cx.quadraticCurveTo(p.neck.x+Math.sin(titleT*4)*3, p.neck.y+14, p.neck.x+Math.sin(titleT*4)*5, p.neck.y+24);
+  cx.stroke(); cx.lineWidth=1;
+  // 머리
+  const hd=p.head;
+  cx.fillStyle='#f0b6a0'; cx.beginPath(); cx.arc(hd.x,hd.y,15,0,7); cx.fill();
+  cx.fillStyle='#3d3a45';
+  cx.beginPath(); cx.arc(hd.x,hd.y-6,15,Math.PI+0.5,-0.5); cx.fill();
+  cx.fillStyle='#e2564b'; cx.fillRect(hd.x-15,hd.y-10,30,6.5);
+  cx.save(); cx.translate(hd.x+13,hd.y-7); cx.rotate(0.5+Math.sin(titleT*5)*0.2);
+  cx.fillRect(0,0,14,5); cx.restore();
+  cx.fillStyle='rgba(232,120,110,0.55)';
+  cx.beginPath(); cx.arc(hd.x-7,hd.y+4,3.4,0,7); cx.fill();
+  cx.beginPath(); cx.arc(hd.x+7,hd.y+4,3.4,0,7); cx.fill();
+  const awake = state==='wake';
+  cx.strokeStyle='#3d3a45'; cx.lineWidth=2;
+  if(awake){
+    cx.fillStyle='#fff';
+    cx.beginPath(); cx.arc(hd.x-5,hd.y-1,4,0,7); cx.fill();
+    cx.beginPath(); cx.arc(hd.x+6,hd.y-1,4,0,7); cx.fill();
+    cx.fillStyle='#3d3a45';
+    cx.beginPath(); cx.arc(hd.x-5,hd.y-1,1.8,0,7); cx.fill();
+    cx.beginPath(); cx.arc(hd.x+6,hd.y-1,1.8,0,7); cx.fill();
+  } else {
+    cx.beginPath(); cx.arc(hd.x-5,hd.y,3.4,0.15,Math.PI-0.15); cx.stroke();
+    cx.beginPath(); cx.arc(hd.x+6,hd.y,3.4,0.15,Math.PI-0.15); cx.stroke();
+  }
+  cx.strokeStyle='#54484a'; cx.lineWidth=2.6;
+  cx.beginPath(); cx.moveTo(hd.x-6,hd.y+7); cx.quadraticCurveTo(hd.x,hd.y+(awake?11:8.6),hd.x+6,hd.y+7); cx.stroke();
+  cx.lineWidth=1;
+  // 말풍선
+  if(bossBubble){
+    const a=clamp(Math.min(bossBubble.t*4,(bossBubble.dur-bossBubble.t)*3),0,1);
+    cx.globalAlpha=a;
+    cx.font='600 15px sans-serif';
+    const tw=cx.measureText(bossBubble.txt).width+22;
+    const bxx=clamp(hd.x-tw/2,camX+8,camX+VW-tw-8), byy=hd.y-64;
+    cx.fillStyle='rgba(20,24,48,0.92)'; roundRect(bxx,byy,tw,30,9); cx.fill();
+    cx.strokeStyle='#5a6488'; cx.stroke();
+    cx.fillStyle='#dfe6ff'; cx.textAlign='center'; cx.fillText(bossBubble.txt,bxx+tw/2,byy+20);
+    cx.globalAlpha=1;
+  }
+}
+function drawCarrier(c){
+  const x=c.x, y=c.y, w=c.w, h=c.h, cxm=x+w/2;
+  const ph=c.walkPh;
+  cx.strokeStyle='#20263e'; cx.lineWidth=6; cx.lineCap='round';
+  const legA=Math.sin(ph)* (Math.abs(c.vx)>20?7:0), legB=-legA;
+  cx.beginPath(); cx.moveTo(cxm-5,y+h-16); cx.lineTo(cxm-5+legA,y+h); cx.stroke();
+  cx.beginPath(); cx.moveTo(cxm+5,y+h-16); cx.lineTo(cxm+5+legB,y+h); cx.stroke();
+  cx.fillStyle=c.color; roundRect(x,y+14,w,h-26,8); cx.fill();
+  cx.fillStyle='#fff'; cx.fillRect(cxm-2.5,y+16,5,10);
+  cx.fillStyle='#f0b6a0'; cx.beginPath(); cx.arc(cxm,y+8,9,0,7); cx.fill();
+  cx.fillStyle='#2b2f45';
+  cx.beginPath(); cx.arc(cxm,y+5.4,9,Math.PI,0); cx.fill();
+  cx.fillStyle='#26293a';
+  cx.beginPath(); cx.arc(cxm+c.facing*3.4,y+8.6,1.7,0,7); cx.fill();
+  // 팔: 그립 앵커까지
+  const an=c.anchor();
+  cx.strokeStyle=c.color; cx.lineWidth=6;
+  if(c.grip){
+    cx.beginPath(); cx.moveTo(cxm-4,y+20); cx.lineTo(an.x-3,an.y); cx.stroke();
+    cx.beginPath(); cx.moveTo(cxm+4,y+20); cx.lineTo(an.x+3,an.y); cx.stroke();
+  } else {
+    const sw=Math.sin(ph)*4;
+    cx.beginPath(); cx.moveTo(cxm-6,y+20); cx.lineTo(cxm-9+sw,y+36); cx.stroke();
+    cx.beginPath(); cx.moveTo(cxm+6,y+20); cx.lineTo(cxm+9-sw,y+36); cx.stroke();
+  }
+  cx.lineWidth=1;
+  // 스트레치 경고(땀)
+  if(c.grip && c.stretchShown>60){
+    cx.fillStyle='#9ed8ff';
+    cx.beginPath(); cx.arc(cxm+11,y+2,3,0,7); cx.fill();
+    if(c.stretchShown>80){
+      cx.font='bold 13px sans-serif'; cx.fillStyle='#ff8d8d'; cx.textAlign='center';
+      cx.fillText('놓칠 것 같아!!',cxm,y-26);
+    }
+  }
+  // 리그랩 힌트
+  if(c.regrabHint){
+    cx.font='bold 13px sans-serif'; cx.fillStyle='#7dffa8'; cx.textAlign='center';
+    cx.fillText(c.role==='front'?'[Shift] 다시 잡기':'[F] 다시 잡기',cxm,y-14);
+    cx.strokeStyle='rgba(125,255,168,0.6)';
+    cx.beginPath(); cx.arc(an.x,an.y,10+3*Math.sin(titleT*6),0,7); cx.stroke();
+  }
+  // 라벨
+  cx.font='bold 12px sans-serif'; cx.textAlign='center';
+  cx.fillStyle='rgba(255,255,255,0.55)';
+  cx.fillText(c.label+(mode==='solo'?(c.role==='front'?' (오른손)':' (왼손)'):''),cxm,y-2);
+  // 초반 조작 힌트
+  if(c.x<860 && state==='play'){
+    cx.fillStyle='rgba(223,230,255,0.75)'; cx.font='12px sans-serif';
+    const txt = c.role==='front'?'←→ 이동 · ↑ 점프 · ↓ 숙이기 · Shift 그립':'A D 이동 · W 점프 · S 숙이기 · F 그립';
+    cx.fillText(txt,cxm,y+h+18);
+  }
+}
+function drawParticles(){
+  for(const p of particles){
+    const a=clamp(1.3-p.t,0,1);
+    cx.globalAlpha=a;
+    if(p.type==='z'){
+      cx.font='bold '+(14+p.t*8)+'px sans-serif'; cx.fillStyle='#9fb4ff'; cx.textAlign='center';
+      cx.fillText('Z',p.x+p.t*22,p.y-p.t*34);
+    } else if(p.type==='text'){
+      cx.font='bold 21px sans-serif'; cx.fillStyle='#ffd08a'; cx.textAlign='center';
+      cx.fillText(p.txt,p.x,p.y-p.t*26);
+    } else if(p.type==='star'){
+      cx.fillStyle='#ffe27d';
+      cx.beginPath(); cx.arc(p.x,p.y,3,0,7); cx.fill();
+    } else if(p.type==='bottle'){
+      cx.save(); cx.translate(p.x,p.y-40*p.t); cx.rotate(p.t*9);
+      cx.fillStyle='#3fae6b'; cx.fillRect(-4,-9,8,18); cx.restore();
+    }
+    cx.globalAlpha=1;
+  }
+}
+function drawHUD(){
+  // 숙면 게이지
+  const mw=280, mx=24, my=22;
+  cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(mx-8,my-8,mw+66,52,12); cx.fill();
+  const fc = meter>55?'#7dffa8':meter>28?'#ffd45e':'#ff6b6b';
+  cx.font='22px sans-serif'; cx.textAlign='center';
+  cx.fillText(meter>55?'😴':meter>28?'😟':'😠', mx+16, my+24);
+  cx.fillStyle='#2b3355'; roundRect(mx+38,my+4,mw,16,8); cx.fill();
+  cx.fillStyle=fc; if(meter>1){ roundRect(mx+38,my+4,mw*meter/100,16,8); cx.fill(); }
+  cx.fillStyle='#aeb9e6'; cx.font='bold 12px sans-serif'; cx.textAlign='left';
+  cx.fillText('부장님 숙면도',mx+38,my+33);
+  if(meter<28){
+    cx.fillStyle='rgba(255,90,90,'+(0.10+0.08*Math.sin(titleT*9))+')';
+    cx.fillRect(0,0,VW,VH);
+  }
+  // 진행 바
+  const pw=420, px0=VW/2-pw/2, py0=26;
+  cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(px0-14,py0-12,pw+28,34,12); cx.fill();
+  cx.strokeStyle='#39415c'; cx.lineWidth=3;
+  cx.beginPath(); cx.moveTo(px0,py0+5); cx.lineTo(px0+pw,py0+5); cx.stroke(); cx.lineWidth=1;
+  cx.font='15px sans-serif'; cx.fillText('🍻',px0-6,py0+11);
+  cx.fillText('🏠',px0+pw-2,py0+11);
+  const prog=clamp(boss.pts.chest.x/GOAL_CX,0,1);
+  cx.fillStyle='#ffd45e'; cx.beginPath(); cx.arc(px0+pw*prog,py0+5,6,0,7); cx.fill();
+  cx.fillStyle='#aeb9e6'; cx.font='bold 12px sans-serif'; cx.textAlign='center';
+  cx.fillText('집까지 '+Math.max(0,Math.round((GOAL_CX-boss.pts.chest.x)/10))+'m',px0+pw/2,py0+17);
+  // 우측 상단 스탯
+  cx.textAlign='right'; cx.fillStyle='rgba(223,230,255,0.85)'; cx.font='bold 14px sans-serif';
+  const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
+  cx.fillText((mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   소음 '+noiseCnt+'회   기상 '+wakeCnt+'회', VW-24, 34);
+  cx.fillStyle='rgba(174,185,230,0.6)'; cx.font='12px sans-serif';
+  cx.fillText('R 체크포인트 재시작 · P 일시정지 · M 음소거', VW-24, 54);
+  // 그립 상태
+  drawGripChip(carriers[0], 24, VH-46);
+  drawGripChip(carriers[1], VW-224, VH-46);
+  // 토스트
+  cx.textAlign='center';
+  toasts.forEach((t,i)=>{
+    const a=clamp(Math.min(t.t*4,(3.2-t.t)*2),0,1);
+    cx.globalAlpha=a;
+    cx.font='bold 17px sans-serif';
+    cx.fillStyle='rgba(10,14,34,0.8)';
+    const w=cx.measureText(t.txt).width+30;
+    roundRect(VW/2-w/2,86+i*38,w,30,9); cx.fill();
+    cx.fillStyle='#ffe9b8'; cx.fillText(t.txt,VW/2,86+i*38+21);
+    cx.globalAlpha=1;
+  });
+  // 뒤척임 경고
+  if(stirPending!==null){
+    cx.font='bold 26px sans-serif'; cx.fillStyle='#ffd45e'; cx.textAlign='center';
+    cx.fillText('⚠ 부장님이 뒤척인다…!',VW/2,170);
+  }
+}
+function drawGripChip(c,x,y){
+  const on=c.grip;
+  cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(x,y,200,34,10); cx.fill();
+  cx.fillStyle=on?'#3ec9a7':'#ff6b6b';
+  cx.beginPath(); cx.arc(x+18,y+17,7,0,7); cx.fill();
+  cx.fillStyle='#dfe6ff'; cx.font='bold 13px sans-serif'; cx.textAlign='left';
+  const key=c.role==='front'?'Shift':'F';
+  cx.fillText(c.label+' ['+key+'] '+(on?'잡는 중':'놓음!'),x+34,y+22);
+}
+function drawTitle(){
+  cx.fillStyle='rgba(8,11,28,0.78)'; cx.fillRect(0,0,VW,VH);
+  cx.textAlign='center';
+  cx.font='900 64px sans-serif';
+  cx.fillStyle='#ffe9b8';
+  cx.fillText('부장님이 잠드셨다',VW/2,190);
+  cx.save(); cx.translate(VW/2+330,128); cx.rotate(0.14);
+  cx.strokeStyle='#e2564b'; cx.lineWidth=3.5; roundRect(-56,-24,112,48,8); cx.stroke();
+  cx.fillStyle='#e2564b'; cx.font='900 25px sans-serif'; cx.fillText('회식엔딩',0,9); cx.restore();
+  cx.fillStyle='#aeb9e6'; cx.font='500 21px sans-serif';
+  cx.fillText('떨어뜨리지 말고, 깨우지 말고, 집까지.',VW/2,236);
+  drawBtn(VW/2-330,300,300,86,'[1]  혼자 연습','왼손=뒷사람(WASD+F) · 오른손=앞사람(방향키+Shift)', keys._h1);
+  drawBtn(VW/2+30,300,300,86,'[2]  둘이서 협동','키보드 반씩 나눠 잡기 · 서로 탓할 준비 필수', keys._h2);
+  // 조작표
+  cx.fillStyle='rgba(20,25,52,0.9)'; roundRect(VW/2-420,430,840,180,14); cx.fill();
+  cx.strokeStyle='#39415c'; cx.stroke();
+  cx.textAlign='left'; cx.font='bold 17px sans-serif';
+  cx.fillStyle='#4f8ef7'; cx.fillText('🟦 뒷사람',VW/2-380,470);
+  cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
+  cx.fillText('A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
+  cx.fillStyle='#3ec9a7'; cx.font='bold 17px sans-serif'; cx.fillText('🟩 앞사람',VW/2-380,540);
+  cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
+  cx.fillText('← / → 이동     ↑ 점프     ↓ 숙이기     Shift(오른쪽) 그립 잡기·놓기',VW/2-380,570);
+  cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
+  cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
+  cx.fillStyle='rgba(139,150,196,0.7)';
+  cx.fillText('물리 협동 프로토타입 v0.1 — 낙하 시 과실 비율이 자동 판정됩니다',VW/2,650);
+}
+function drawBtn(x,y,w,h,t1,t2,hover){
+  cx.fillStyle='rgba(31,39,80,0.95)'; roundRect(x,y,w,h,14); cx.fill();
+  cx.strokeStyle='#5a6488'; cx.lineWidth=2; cx.stroke(); cx.lineWidth=1;
+  cx.textAlign='center';
+  cx.fillStyle='#ffe9b8'; cx.font='bold 25px sans-serif'; cx.fillText(t1,x+w/2,y+38);
+  cx.fillStyle='#aeb9e6'; cx.font='12.5px sans-serif'; cx.fillText(t2,x+w/2,y+64);
+}
+function topReason(side){
+  const rs=faults[side].reasons; let best=null,bv=-1;
+  for(const k in rs) if(rs[k]>bv){bv=rs[k];best=k;}
+  return best?REASON_KO[best]:'혐의는 없으나 어쩐지 수상함';
+}
+function drawWake(){
+  wakeAnimT+=FDT;
+  cx.fillStyle='rgba(30,6,10,'+clamp(wakeAnimT*1.5,0,0.86)+')'; cx.fillRect(0,0,VW,VH);
+  if(wakeAnimT<0.5) return;
+  cx.textAlign='center';
+  cx.font='900 54px sans-serif'; cx.fillStyle='#ff6b6b';
+  cx.fillText('부장님이 깨어났다',VW/2,150);
+  cx.font='600 24px sans-serif'; cx.fillStyle='#ffd9a0';
+  cx.fillText('"'+lastWakeLine+'"',VW/2,196);
+  cx.font='bold 21px sans-serif'; cx.fillStyle='#dfe6ff';
+  cx.fillText('집까지 겨우 '+lastRemainM+'m 남기고…',VW/2,246);
+  // 과실 정산
+  let f=faults.front.total, b=faults.back.total;
+  if(f+b<1){ f=1; b=1.08; }
+  let fp=Math.round(f/(f+b)*100); if(fp===50) fp=51; const bp=100-fp;
+  const bw=560, bx0=VW/2-bw/2, by0=300;
+  cx.fillStyle='rgba(12,16,38,0.9)'; roundRect(bx0-40,by0-46,bw+80,240,16); cx.fill();
+  cx.strokeStyle='#5a6488'; cx.stroke();
+  cx.font='bold 20px sans-serif'; cx.fillStyle='#ffe9b8';
+  cx.fillText('─ 낙하 사고 과실 판정 ─',VW/2,by0-14);
+  cx.fillStyle='#4f8ef7'; cx.fillRect(bx0,by0+10,bw*bp/100,34);
+  cx.fillStyle='#3ec9a7'; cx.fillRect(bx0+bw*bp/100,by0+10,bw*fp/100,34);
+  cx.font='900 22px sans-serif'; cx.fillStyle='#fff'; cx.textAlign='left';
+  cx.fillText('뒷사람 '+bp+'%',bx0+10,by0+34);
+  cx.textAlign='right'; cx.fillText(fp+'% 앞사람',bx0+bw-10,by0+34);
+  cx.textAlign='center'; cx.font='15px sans-serif';
+  cx.fillStyle='#9fc3ff'; cx.fillText('뒷사람 주요 혐의: '+topReason('back'),VW/2,by0+80);
+  cx.fillStyle='#9fe8d6'; cx.fillText('앞사람 주요 혐의: '+topReason('front'),VW/2,by0+108);
+  cx.fillStyle='#8b96c4'; cx.font='12px sans-serif';
+  cx.fillText('※ 본 판정에 대한 이의신청은 받지 않습니다.',VW/2,by0+140);
+  cx.font='bold 19px sans-serif'; cx.fillStyle='#ffe9b8';
+  cx.fillText('R  체크포인트에서 계속     ·     T  처음부터',VW/2,by0+186);
+}
+function drawClear(){
+  clearT+=FDT;
+  cx.fillStyle='rgba(8,11,28,'+clamp(clearT*0.8,0,0.6)+')'; cx.fillRect(0,0,VW,VH);
+  cx.textAlign='center';
+  if(clearT>0.3){ cx.font='600 22px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText('띠링—',VW/2,150); }
+  if(clearT>1.3){ cx.font='600 20px sans-serif'; cx.fillStyle='#dfe6ff'; cx.fillText('사모님: "…또 회식이야?"',VW/2,192); }
+  if(clearT>2.4){ cx.font='600 20px sans-serif'; cx.fillStyle='#aeb9e6'; cx.fillText('부장님: "…나 안 취했어…"',VW/2,230); }
+  if(clearT>3.4 && gradeInfo){
+    if(!gradeInfo.stamped){ gradeInfo.stamped=true; sStamp(); setTimeout(sFanfa,300); }
+    cx.fillStyle='rgba(12,16,38,0.94)'; roundRect(VW/2-330,270,660,330,18); cx.fill();
+    cx.strokeStyle='#5a6488'; cx.stroke();
+    cx.font='bold 24px sans-serif'; cx.fillStyle='#ffe9b8';
+    cx.fillText('─ 인사고과 정산 ─',VW/2,316);
+    cx.save(); cx.translate(VW/2+200,350); cx.rotate(-0.18);
+    const gc = gradeInfo.g==='S'?'#ffd45e':gradeInfo.g==='F'?'#ff6b6b':'#e2564b';
+    cx.strokeStyle=gc; cx.lineWidth=5; cx.beginPath(); cx.arc(0,0,52,0,7); cx.stroke();
+    cx.fillStyle=gc; cx.font='900 68px sans-serif'; cx.fillText(gradeInfo.g,0,24); cx.restore();
+    cx.textAlign='left'; cx.font='16px sans-serif'; cx.fillStyle='#dfe6ff';
+    const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
+    const lines=[
+      '배달 시간          '+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'  (기준 '+Math.floor(diff.par/60)+':'+String(diff.par%60).padStart(2,'0')+')',
+      '소음 발생          '+noiseCnt+'회',
+      '부장님 기상        '+wakeCnt+'회',
+      '과실 누계          뒷사람 '+Math.round(faults.back.total)+' : '+Math.round(faults.front.total)+' 앞사람'
+    ];
+    lines.forEach((l,i)=>cx.fillText(l,VW/2-290,360+i*32));
+    cx.textAlign='center'; cx.font='bold 19px sans-serif'; cx.fillStyle='#ffd9a0';
+    cx.fillText('“'+gradeInfo.cap+'”',VW/2,522);
+    cx.font='bold 17px sans-serif'; cx.fillStyle='#ffe9b8';
+    cx.fillText('T  다시 배달하기      Esc  타이틀로',VW/2,568);
+  }
+}
+function drawPause(){
+  cx.fillStyle='rgba(8,11,28,0.7)'; cx.fillRect(0,0,VW,VH);
+  cx.textAlign='center'; cx.font='900 44px sans-serif'; cx.fillStyle='#ffe9b8';
+  cx.fillText('일시정지',VW/2,330);
+  cx.font='17px sans-serif'; cx.fillStyle='#aeb9e6';
+  cx.fillText('P 계속 · R 체크포인트 재시작 · Esc 타이틀',VW/2,380);
+}
+
+/* ---------------- 화면 전환 입력 ---------------- */
+function metaInput(){
+  if(state==='title'){
+    let m=null;
+    if(pressed['Digit1']) m='solo';
+    if(pressed['Digit2']) m='duo';
+    if(clickPt){
+      if(clickPt.y>300&&clickPt.y<386){
+        if(clickPt.x>VW/2-330&&clickPt.x<VW/2-30) m='solo';
+        if(clickPt.x>VW/2+30&&clickPt.x<VW/2+330) m='duo';
+      }
+    }
+    if(m) startGame(m);
+  } else if(state==='play'){
+    if(pressed['KeyR']){ respawn(false); meter=Math.max(meter,40); toast('체크포인트에서 재정비!'); }
+    if(pressed['KeyP']||pressed['Escape']) state='pause';
+  } else if(state==='pause'){
+    if(pressed['KeyP']) state='play';
+    if(pressed['KeyR']){ respawn(false); meter=Math.max(meter,40); state='play'; }
+    if(pressed['Escape']) state='title';
+  } else if(state==='wake'){
+    if(pressed['KeyR']){ respawn(); state='play'; }
+    if(pressed['KeyT']) startGame(mode);
+  } else if(state==='clear'){
+    if(pressed['KeyT']) startGame(mode);
+    if(pressed['Escape']) state='title';
+  }
+  if(pressed['KeyM']){ muted=!muted; if(master) master.gain.value=muted?0:0.5; }
+}
+
+/* ---------------- 메인 루프 ---------------- */
+let lastT=0, acc=0;
+carriers=[
+  new Carrier('back', 300,'#4f8ef7',KM_BACK,'뒷사람'),
+  new Carrier('front',450,'#3ec9a7',KM_FRONT,'앞사람')
+];
+resetBottles();
+{ const f=carriers[1].anchor(), b=carriers[0].anchor(); buildBoss(f.x,f.y,b.x,b.y); }
+camX=0;
+function frame(t){
+  requestAnimationFrame(frame);
+  const rdt=Math.min(0.05,(t-lastT)/1000||0.016); lastT=t;
+  titleT+=rdt;
+  if(slowT>0){ slowT-=rdt; if(slowT<=0) timeScale=1; }
+  acc+=rdt*timeScale;
+  let n=0;
+  while(acc>=FDT && n<4){
+    metaInput();
+    if(state==='play') update(FDT);
+    else if(state==='title'){
+      // 타이틀 뒤에서 부장님이 살아있는 물리로 잠자는 데모
+      for(let s=0;s<SUB;s++) stepBossPhysics();
+      snoreT+=FDT; if(snoreT>2.3){snoreT=0; sSnore(); spawnP('z',boss.pts.head.x,boss.pts.head.y-20);}
+      for(const p of particles){p.t+=FDT; p.x+=p.vx*FDT; p.y+=p.vy*FDT;}
+      particles=particles.filter(p=>p.t<1.4);
+    }
+    for(const k in pressed) pressed[k]=false;
+    clickPt=null;
+    acc-=FDT; n++;
+  }
+  draw();
+}
+requestAnimationFrame(frame);
+</script>
