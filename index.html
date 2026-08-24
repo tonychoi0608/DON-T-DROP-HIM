@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>부장님이 잠드셨다</title>
+<title>부장님이 잠드셨다 v0.2</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -13,7 +13,7 @@
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 회식 물리 협동 프로토타입 v0.1
+   부장님이 잠드셨다 — 사고 밀도 강화 프로토타입 v0.2
    1인(양손 연습) / 2인(키보드 분할) · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -29,14 +29,18 @@ if (matchMedia && matchMedia('(pointer: coarse)').matches)
 /* ---------------- 입력 ---------------- */
 const keys = {}, pressed = {};
 const GAMEKEYS = new Set(['KeyA','KeyD','KeyW','KeyS','KeyF','ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
-  'ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyP','Escape','Enter','Digit1','Digit2','KeyK','Digit9','Digit0','Space']);
+  'ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyV','KeyP','KeyG','KeyI','Escape','Enter','Digit1','Digit2','KeyK','Digit9','Digit0','Space']);
 window.addEventListener('keydown',e=>{
   if (GAMEKEYS.has(e.code)) e.preventDefault();
   if (!keys[e.code]) pressed[e.code]=true;
   keys[e.code]=true; ensureAudio();
 });
 window.addEventListener('keyup',e=>{ keys[e.code]=false; });
-window.addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; if(state==='play') state='pause'; });
+window.addEventListener('blur',()=>{
+  for(const k in keys) keys[k]=false;
+  if(state==='play') state='pause';
+  if(scrapeGain) scrapeGain.gain.value=0;
+});
 let clickPt = null;
 cv.addEventListener('pointerdown',e=>{
   const r=cv.getBoundingClientRect();
@@ -46,6 +50,8 @@ cv.addEventListener('pointerdown',e=>{
 
 /* ---------------- 사운드 (전부 신스, 외부 파일 없음) ---------------- */
 let AC=null, master=null, scrapeGain=null, muted=false;
+let micStream=null, micSource=null, micAnalyser=null, micData=null;
+let micEnabled=false, micStatus='OFF', micLevel=0, micHitCd=0;
 function ensureAudio(){
   if (AC) { if(AC.state==='suspended') AC.resume().catch(()=>{}); return; }
   try{
@@ -76,6 +82,33 @@ function noiseHit(dur,vol,freq){
   const f=AC.createBiquadFilter(); f.type='lowpass'; f.frequency.value=freq||500;
   const g=AC.createGain(); g.gain.value=vol;
   s.connect(f); f.connect(g); g.connect(master); s.start(t);
+}
+async function toggleMic(){
+  if(micEnabled){
+    if(micStream) for(const tr of micStream.getTracks()) tr.stop();
+    micStream=micSource=micAnalyser=micData=null; micEnabled=false; micStatus='OFF';
+    silentZone.active=false;
+    toast('🎙 실제 마이크 OFF'); return;
+  }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+    micStatus='지원 안 됨'; toast('이 브라우저는 마이크를 지원하지 않습니다'); return;
+  }
+  try{
+    ensureAudio();
+    micStatus='권한 확인 중';
+    micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    if(!AC) ensureAudio();
+    micSource=AC.createMediaStreamSource(micStream);
+    micAnalyser=AC.createAnalyser(); micAnalyser.fftSize=512; micAnalyser.smoothingTimeConstant=0.35;
+    micData=new Uint8Array(micAnalyser.fftSize); micSource.connect(micAnalyser);
+    micEnabled=true; micStatus='ON'; toast('🎙 실제 마이크 ON — 놀라도 소리 지르지 마세요');
+  }catch(err){ micEnabled=false; micStatus='권한 거부'; toast('마이크를 켜지 못했습니다'); }
+}
+function sampleMic(){
+  if(!micEnabled||!micAnalyser||!micData){ micLevel=0; return 0; }
+  micAnalyser.getByteTimeDomainData(micData);
+  let sum=0; for(const v of micData){ const n=(v-128)/128; sum+=n*n; }
+  micLevel=Math.sqrt(sum/micData.length); return micLevel;
 }
 const sThud   = v=>{ noiseHit(0.1,Math.min(0.8,v),380); tone(90,45,0.14,'sine',0.4); };
 const sSnore  = ()=>{ tone(120,78,0.5,'sawtooth',0.06); tone(310,240,0.4,'sine',0.03,0.55); };
@@ -115,7 +148,7 @@ box(6150, G_Y-22, 200, 22, 'curb');
 const CHECKPOINTS = [{x:360},{x:3500},{x:5150}];
 const catZone = {x0:2700, x1:2980, catX:2860, spooked:false, runX:0};
 let bottles = [];
-function resetBottles(){ bottles=[{x:2470,k:false},{x:2515,k:false},{x:2552,k:false},{x:5470,k:false},{x:5510,k:false}]; }
+function resetBottles(){ bottles=[2470,2515,2552,5470,5510].map(x=>({x,k:false,vx:0,rot:0,done:false})); }
 
 /* 배경 프리컴퓨트 */
 const starsA=[]; for(let i=0;i<90;i++) starsA.push({x:Math.random()*VW,y:Math.random()*380,r:Math.random()*1.4+0.4,tw:Math.random()*6});
@@ -313,12 +346,16 @@ class Carrier{
     const near=dist2(an.x,an.y,m.x,m.y)<64;
     this.regrabHint = !this.grip && near;
     if(gPressed){
-      if(this.grip){ this.grip=false; addFault(this.side(),5,'release'); sSlip(); toast(this.label+'가 손을 놓았다!'); }
-      else if(near){ this.grip=true; sChime(); }
+      if(this.grip){
+        this.grip=false; lastGripChange[this.side()]=runTime; gripDropCnt++;
+        addFault(this.side(),5,'release'); sSlip(); toast(this.label+'가 손을 놓았다!');
+      }
+      else if(near){ this.grip=true; lastGripChange[this.side()]=runTime; onRegrip(this.side()); sChime(); }
     }
     // 과신전 슬립
     if(this.grip && this.stretch>95){ this.slipT+=dt; if(this.slipT>0.12){
-      this.grip=false; this.slipT=0; addFault(this.side(),12,'slip'); sSlip();
+      this.grip=false; this.slipT=0; lastGripChange[this.side()]=runTime; gripDropCnt++;
+      addFault(this.side(),12,'slip'); sSlip();
       toast('⚠ '+this.label+' 손이 미끄러졌다!'); shake=8;
     }} else this.slipT=0;
     this.walkPh += Math.abs(this.vx)*dt*0.05;
@@ -338,34 +375,107 @@ let carriers=[];
 /* ---------------- 게임 상태 ---------------- */
 let state='title', mode=null, diff={dmg:1,drain:1,par:220};
 let meter=100, runTime=0, noiseCnt=0, wakeCnt=0, cpIdx=0;
-let faults={front:{total:0,reasons:{}}, back:{total:0,reasons:{}}};
+let faults={front:{total:0,reasons:{},counts:{}}, back:{total:0,reasons:{},counts:{}}};
 let shake=0, camX=0, timeScale=1, slowT=0;
-let nextStir=0, stirWarnT=0, stirPending=null, snoreT=0, calmT=0;
+let nextStir=0, stirWarnT=0, stirPending=null, snoreT=0;
 let dragNoiseT=0, sinceDmg=99, lastWakeLine='', lastRemainM=0;
 let clearT=-1, wakeAnimT=0, gradeInfo=null, toasts=[], particles=[], bossBubble=null;
 let titleT=0;
+let actionHistory={front:[],back:[]}, lastGripChange={front:-99,back:-99};
+let incident=null, incidentCd=0, incidentLog=[], clipScore=0;
+let rescues={front:{score:0,counts:{}},back:{score:0,counts:{}}};
+let friendSave=null, bothLoose=false, bothLooseAt=-99, nearMissArmed=false, nearMissT=0;
+let eyeOpen={active:false,t:0,next:99,penaltyCd:0,moved:false};
+let silentZone={active:false,t:0,index:-1,hitCd:0}, silentVisited=[false,false];
+let headHitCnt=0, gripDropCnt=0, manualResetCnt=0, mission=null;
+let trash={x:2635,spilled:false};
+let taxi={x0:4920,x1:5280,active:true,entered:false,t:0,success:false,failed:false};
 const REASON_KO = {release:'손을 스스로 놓아버림', slip:'무리하게 당겨 손이 미끄러짐',
   impact:'낙하 충격 유발', drag:'부장님을 바닥에 끌고 다님', cat:'고양이를 놀라게 함',
-  bottle:'소주병을 걷어참', abandon:'부장님을 길에 방치함'};
+  bottle:'소주병을 걷어참', abandon:'부장님을 길에 방치함', mic:'고함으로 숙면을 방해함'};
 const SLEEPTALK=['으음… 김대리… 그 보고서는…','한 잔만… 딱 한 잔만 더…','우리 팀은… 가족이야…','라떼는… 말이야…','으어… 2차… 2차 가야지…','…내가 다 책임진다니까…'];
 const WAKELINES=['야!! 여기가 어디야!!','김대리… 자네 지금 뭐 하는 건가…','내 구두!! 내 구두 어디 갔어!!','자네들, 내일 아침에 보자.','이게 지금 몇 시야!!'];
+const MISSIONS=[
+  {id:'quiet',title:'쉿!',desc:'소음을 3회 이하로',short:'소음 ≤ 3'},
+  {id:'head',title:'무사 귀환',desc:'머리를 바닥에 부딪히지 않기',short:'머리 충격 0'},
+  {id:'fast',title:'빠른 귀가',desc:'3분 안에 도착',short:'03:00 이내'},
+  {id:'balance',title:'공동 책임',desc:'과실 차이 10% 이하',short:'과실 차 ≤ 10%'},
+  {id:'grip',title:'철벽 경호',desc:'누구도 손을 놓지 않기',short:'그립 해제 0'}
+];
 
 function addFault(side,amt,reason){
   const f=faults[side]; f.total+=amt; f.reasons[reason]=(f.reasons[reason]||0)+amt;
+  f.counts[reason]=(f.counts[reason]||0)+1;
 }
 function toast(txt){ toasts.push({txt,t:0}); if(toasts.length>3) toasts.shift(); }
 function spawnP(type,x,y,txt){ particles.push({type,x,y,vx:rnd(-30,30),vy:rnd(-70,-30),t:0,txt}); }
 
+function sleepStage(){ return meter>=60?'deep':meter>=30?'light':meter>=10?'half':'edge'; }
+function sleepSensitivity(){ const s=sleepStage(); return s==='deep'?0.9:s==='light'?1.08:s==='half'?1.28:1.5; }
+function recordActions(){
+  for(const c of carriers){
+    const a=actionHistory[c.side()];
+    a.push({t:runTime,x:c.x,y:c.y,vx:c.vx,vy:c.vy,grip:c.grip,stretch:c.stretchShown||0});
+    while(a.length&&runTime-a[0].t>1.5) a.shift();
+  }
+}
+function actionScore(side,p){
+  const a=actionHistory[side], c=carriers.find(v=>v.side()===side);
+  let speed=0, stretch=0;
+  for(const v of a){ speed=Math.max(speed,Math.abs(v.vx)); stretch=Math.max(stretch,v.stretch); }
+  const recentRelease=runTime-lastGripChange[side]<1.5?34:0;
+  const distance=c?clamp(180-dist2(c.x,c.y,p.x,p.y),0,180)/12:0;
+  return 18+speed/12+stretch/7+recentRelease+distance;
+}
+function triggerIncident(p,spd,dmg){
+  if(incidentCd>0||dmg<3) return;
+  let fs=actionScore('front',p), bs=actionScore('back',p);
+  const frontBody=boss.headEnd.indexOf(p)>=0;
+  if(frontBody) fs+=22; else bs+=22;
+  let fp=clamp(Math.round(fs/(fs+bs)*100),8,92), bp=100-fp;
+  const part=p===boss.pts.head?'머리':p===boss.pts.chest?'상체':frontBody?'팔·어깨':'하체';
+  incident={title:'부장님 '+part+' 충돌',fp,bp,t:0,dur:1.75,dmg}; incidentCd=1.25;
+  incidentLog.push({title:incident.title,fp,bp,dmg,at:runTime});
+  if(incidentLog.length>12) incidentLog.shift();
+  slowT=0.42; timeScale=0.22; shake=Math.max(shake,12);
+}
+function addRescue(side,name,score){
+  clipScore+=score;
+  if(side==='front'||side==='back'){
+    const r=rescues[side]; r.score+=score; r.counts[name]=(r.counts[name]||0)+1;
+  }
+  incident={title:name+'!  +'+score,fp:null,bp:null,t:0,dur:1.7,rescue:true};
+  sChime(); for(let i=0;i<8;i++) spawnP('star',boss.pts.chest.x,boss.pts.chest.y-20);
+}
+function onRegrip(side){
+  if(bothLoose&&runTime-bothLooseAt<=0.7){ addRescue(side,'기사회생',300); bothLoose=false; }
+  if(nearMissArmed&&nearMissT>0){ addRescue(side,'간발의 차',150); nearMissArmed=false; }
+}
+function faultPercent(){
+  let f=faults.front.total,b=faults.back.total; if(f+b<1){f=1;b=1;}
+  const fp=Math.round(f/(f+b)*100); return {front:fp,back:100-fp};
+}
+function missionPassed(){
+  if(!mission) return false;
+  if(mission.id==='quiet') return noiseCnt<=3;
+  if(mission.id==='head') return headHitCnt===0;
+  if(mission.id==='fast') return runTime<=180;
+  if(mission.id==='balance'){ const p=faultPercent(); return Math.abs(p.front-p.back)<=10; }
+  return gripDropCnt===0;
+}
+
 function onBossImpact(p,spd){
   if(state!=='play') return;
   const isHead = p===boss.pts.head;
-  let dmg = Math.min(24,(spd-620)/46) * (isHead?1.7:1) * diff.dmg;
+  let dmg = Math.min(24,(spd-620)/46) * (isHead?1.7:1) * diff.dmg * sleepSensitivity();
   if(dmg<=0) return;
   meter -= dmg; sinceDmg=0;
   sThud(Math.min(0.8, dmg/12));
   shake=Math.max(shake, Math.min(14,dmg*1.2));
   const side = boss.headEnd.indexOf(p)>=0 ? 'front':'back';
   addFault(side, dmg, 'impact');
+  if(isHead) headHitCnt++;
+  triggerIncident(p,spd,dmg);
   if(dmg>5){
     noiseCnt++;
     spawnP('text',p.x,p.y-24,'쿵!');
@@ -379,11 +489,21 @@ function startGame(m){
   mode=m;
   diff = m==='solo' ? {dmg:0.72,drain:0.72,par:280} : {dmg:1,drain:1,par:220};
   runTime=0; noiseCnt=0; wakeCnt=0; cpIdx=0;
-  faults={front:{total:0,reasons:{}}, back:{total:0,reasons:{}}};
+  faults={front:{total:0,reasons:{},counts:{}}, back:{total:0,reasons:{},counts:{}}};
+  actionHistory={front:[],back:[]}; lastGripChange={front:-99,back:-99};
+  incident=null; incidentCd=0; incidentLog=[]; clipScore=0;
+  rescues={front:{score:0,counts:{}},back:{score:0,counts:{}}};
+  friendSave=null; bothLoose=false; bothLooseAt=-99; nearMissArmed=false; nearMissT=0;
+  eyeOpen={active:false,t:0,next:rnd(12,18),penaltyCd:0,moved:false};
+  silentZone={active:false,t:0,index:-1,hitCd:0}; silentVisited=[false,false];
+  headHitCnt=0; gripDropCnt=0; manualResetCnt=0;
+  trash={x:2635,spilled:false}; taxi={x0:4920,x1:5280,active:true,entered:false,t:0,success:false,failed:false};
+  mission=MISSIONS[(Math.random()*MISSIONS.length)|0];
   resetBottles(); catZone.spooked=false;
   meter=100; clearT=-1; gradeInfo=null; toasts=[]; particles=[];
   respawn(true); state='play';
   nextStir=runTime+rnd(14,22);
+  toast('오늘의 미션 — '+mission.title+': '+mission.desc);
   toast(m==='solo'?'연습 모드: 왼손이 뒷사람, 오른손이 앞사람!':'협동 모드: 서로 탓할 준비 되셨습니까');
 }
 function respawn(fullMeter){
@@ -395,15 +515,22 @@ function respawn(fullMeter){
   const f=carriers[1].anchor(), b=carriers[0].anchor();
   buildBoss(f.x,f.y,b.x,b.y);
   if(fullMeter!==false) meter = wakeCnt===0?100:66;
+  actionHistory={front:[],back:[]}; lastGripChange={front:-99,back:-99};
+  friendSave=null; bothLoose=false; bothLooseAt=-99; nearMissArmed=false; nearMissT=0; incident=null;
   timeScale=1; slowT=0; bossBubble=null;
+  if(scrapeGain) scrapeGain.gain.value=0;
 }
 
 /* ---------------- 업데이트 ---------------- */
 function update(dt){
   if(state!=='play') return;
   runTime+=dt; sinceDmg+=dt;
+  if(incidentCd>0) incidentCd-=dt;
+  if(micHitCd>0) micHitCd-=dt;
+  if(nearMissT>0){ nearMissT-=dt; if(nearMissT<=0) nearMissArmed=false; }
 
   for(const c of carriers) c.update(dt);
+  recordActions();
   // 캐리어끼리 겹침 방지(몸이 접혀 떨리는 것 방지)
   {
     const a=carriers[0], b=carriers[1], dxc=b.x-a.x, gap=44;
@@ -416,12 +543,63 @@ function update(dt){
 
   const chest=boss.pts.chest, pelvis=boss.pts.pelvis, head=boss.pts.head;
   const anyGrip = carriers.some(c=>c.grip);
+  const gripCount = carriers.filter(c=>c.grip).length;
   const avgSpd = (Math.abs(carriers[0].vx)+Math.abs(carriers[1].vx))/2;
+
+  // Friend Save: 한 명이 버티고 다른 한 명이 다시 붙는 구조
+  if(gripCount===1){
+    const holder=carriers.find(c=>c.grip).side();
+    if(!friendSave||friendSave.holder!==holder) friendSave={holder,t:0,soloAward:false};
+    friendSave.t+=dt;
+    if(friendSave.t>=2&&!friendSave.soloAward){ friendSave.soloAward=true; addRescue(holder,'독박 운반',200); }
+  } else if(gripCount===2&&friendSave){
+    if(friendSave.t<=3.2) addRescue(friendSave.holder,'팀워크 구조',250);
+    friendSave=null;
+  } else if(gripCount===0){ friendSave=null; }
+  if(gripCount===0&&!bothLoose){ bothLoose=true; bothLooseAt=runTime; }
+  if(gripCount>0&&bothLoose) bothLoose=false;
+
+  const headVy=(head.y-head.py)/SDT;
+  if(gripCount<2&&head.y>G_Y-45&&headVy>100){ nearMissArmed=true; nearMissT=0.65; }
+
+  // 수면 단계: 반수면에서는 갑자기 눈을 뜨며, 입력하면 추가 피해
+  if(!eyeOpen.active&&meter<30&&runTime>eyeOpen.next){
+    eyeOpen.active=true; eyeOpen.t=rnd(2.2,3); eyeOpen.moved=false; eyeOpen.penaltyCd=0;
+    toast('👀 움직이지 마세요.'); bossSay('……',eyeOpen.t); sGroan();
+  }
+  if(eyeOpen.active){
+    eyeOpen.t-=dt; eyeOpen.penaltyCd-=dt;
+    const moved=['KeyA','KeyD','KeyW','ArrowLeft','ArrowRight','ArrowUp'].some(k=>keys[k]);
+    if(moved&&eyeOpen.penaltyCd<=0){
+      eyeOpen.moved=true; eyeOpen.penaltyCd=0.32; meter-=3.5*diff.drain; sinceDmg=0;
+      toast('👀 들켰습니다! 움직이지 마세요'); shake=4;
+    }
+    if(eyeOpen.t<=0){
+      eyeOpen.active=false; eyeOpen.next=runTime+rnd(15,24);
+      if(!eyeOpen.moved) addRescue('team','눈치 만점',100);
+      bossSay('…zzz',1.4); sSnore();
+    }
+  }
+
+  // 실제 마이크: 일반 구간과 Silent Zone의 임계값을 다르게 적용
+  const liveMic=sampleMic();
+  if(micEnabled&&liveMic>(silentZone.active?0.09:0.18)&&micHitCd<=0){
+    micHitCd=silentZone.active?0.55:0.9;
+    const side=Math.abs(carriers[0].vx)>Math.abs(carriers[1].vx)?'back':'front';
+    const dmg=silentZone.active?6:4; meter-=dmg*diff.drain; noiseCnt++; sinceDmg=0;
+    addFault(side,dmg,'mic'); toast(silentZone.active?'🤫 조용히 하세요!':'🔊 너무 시끄럽습니다!'); shake=5;
+  }
+  const silentXs=[3260,5750];
+  for(let i=0;i<silentXs.length;i++) if(micEnabled&&!silentVisited[i]&&chest.x>silentXs[i]){
+    silentVisited[i]=true; silentZone={active:true,t:8,index:i,hitCd:0};
+    toast('🤫 부장님이 선잠에 들었습니다 — 8초간 조용히!');
+  }
+  if(silentZone.active){ silentZone.t-=dt; if(silentZone.t<=0){silentZone.active=false;addRescue('team','무음 통과',150);} }
 
   // 끌기(드래그) 판정
   const touching = chest.onGround||pelvis.onGround||head.onGround;
   if(anyGrip && touching && avgSpd>90){
-    meter -= 4.5*dt*diff.drain; sinceDmg=0;
+    meter -= 4.5*dt*diff.drain*sleepSensitivity(); sinceDmg=0;
     if(scrapeGain&&!muted) scrapeGain.gain.value=Math.min(0.12,avgSpd/2200);
     dragNoiseT+=dt;
     if(dragNoiseT>1.1){ dragNoiseT=0; noiseCnt++;
@@ -456,19 +634,45 @@ function update(dt){
 
   // 소주병
   for(const b of bottles){
-    if(b.k) continue;
-    for(const c of carriers){
-      if(Math.abs(c.x+c.w/2-b.x)<20 && Math.abs(c.vx)>90 && c.grounded){
-        b.k=true; sKick(); meter-=4*diff.drain; noiseCnt++; sinceDmg=0;
-        addFault(c.side(),4,'bottle');
-        spawnP('bottle',b.x,G_Y-10); spawnP('text',b.x,G_Y-40,'쨍그랑!');
+    if(!b.k){
+      for(const c of carriers){
+        if(Math.abs(c.x+c.w/2-b.x)<20 && Math.abs(c.vx)>90 && c.grounded){
+          b.k=true; b.vx=c.vx*1.8; sKick(); meter-=4*diff.drain; noiseCnt++; sinceDmg=0;
+          addFault(c.side(),4,'bottle'); spawnP('text',b.x,G_Y-40,'데구르르!');
+        }
+      }
+    } else if(!b.done){
+      b.x+=b.vx*dt; b.rot+=b.vx*dt*0.03; b.vx*=Math.pow(0.2,dt);
+      if(Math.abs(b.vx)<8) b.done=true;
+      if(!trash.spilled&&Math.abs(b.x-trash.x)<25){
+        trash.spilled=true; b.done=true; sKick(); noiseCnt++; meter-=7*diff.drain;
+        toast('🗑 쓰레기봉투 → 고양이 → 택시 경적!'); shake=8;
+        if(!catZone.spooked){ catZone.spooked=true; catZone.runX=catZone.catX; sMeow(); }
+        setVel(chest,rnd(-180,180),-220); bossSay('으음… 시끄러…',1.8);
       }
     }
   }
 
   // 체크포인트
   for(let i=cpIdx+1;i<CHECKPOINTS.length;i++){
-    if(chest.x>CHECKPOINTS[i].x){ cpIdx=i; sChime(); toast('📍 체크포인트! 부장님이 편안해 보인다'); }
+    if(chest.x>CHECKPOINTS[i].x){
+      cpIdx=i; sChime(); toast('📍 체크포인트! 부장님이 편안해 보인다');
+      if(meter<=10) addRescue('team','극한의 눈치',500);
+    }
+  }
+
+  // 택시: 부장님을 표시 구역에 내려놓으면 800m를 건너뛴다
+  if(taxi.active&&!taxi.success&&!taxi.failed){
+    if(chest.x>taxi.x0-80&&chest.x<taxi.x1+80){
+      if(!taxi.entered){ taxi.entered=true; toast('🚕 뒷문에 조심히 내려놓으면 800m 단축!'); }
+      taxi.t+=dt;
+      const inside=chest.x>taxi.x0+35&&chest.x<taxi.x1-35&&pelvis.x>taxi.x0+20&&pelvis.x<taxi.x1-20;
+      if(inside&&!anyGrip&&(chest.onGround||pelvis.onGround)&&bossVel(chest)<95){
+        taxi.success=true; taxi.active=false; addRescue('team','택시 탑승 성공',400); sBell();
+        const dx=800; for(const c of carriers)c.x+=dx; for(const p of boss.list){p.x+=dx;p.px+=dx;}
+        toast('🚕 거리 -800m! 기사님, 명진아파트로요');
+      } else if(taxi.t>12){ taxi.failed=true; taxi.active=false; toast('🚕 “손님, 그냥 내려주세요.”'); }
+    }
   }
 
   // 뒤척임 이벤트
@@ -491,7 +695,8 @@ function update(dt){
         sSnore(); bossSay(SLEEPTALK[(Math.random()*SLEEPTALK.length)|0],2.6);
       }
       stirPending=null;
-      nextStir=runTime+rnd(18,32)*(meter<35?0.6:1);
+      const stage=sleepStage();
+      nextStir=runTime+rnd(18,32)*(stage==='edge'?0.35:stage==='half'?0.55:stage==='light'?0.78:1);
     }
   }
 
@@ -508,7 +713,7 @@ function update(dt){
     lastWakeLine=WAKELINES[(Math.random()*WAKELINES.length)|0];
     lastRemainM=Math.max(0,Math.round((GOAL_CX-chest.x)/10));
     wakeAnimT=0;
-    setTimeout(()=>{},0);
+    incident=null; if(scrapeGain) scrapeGain.gain.value=0;
     state='wake'; sGroan(); sThud(0.8);
   }
 
@@ -519,7 +724,9 @@ function update(dt){
     if(spd<70 && grounded){
       state='clear'; clearT=0; sBell();
       const par=diff.par;
-      let pts=100 - wakeCnt*25 - Math.max(0,noiseCnt-2)*4 - Math.max(0,runTime-par)*0.2;
+      const totalFault=faults.front.total+faults.back.total;
+      let pts=100 - wakeCnt*25 - Math.max(0,noiseCnt-2)*4 - Math.max(0,runTime-par)*0.2
+        - Math.min(20,totalFault*0.08) - manualResetCnt*4;
       let g,cap;
       if(pts>=90&&wakeCnt===0){g='S';cap='차기 임원감. 부장님이 아침에 해장국을 쏜다.';}
       else if(pts>=75){g='A';cap='"자네만 믿네." — 두터운 신임을 얻었다.';}
@@ -527,7 +734,8 @@ function update(dt){
       else if(pts>=40){g='C';cap='월요일 아침, 어쩐지 눈치가 보인다.';}
       else if(pts>=22){g='D';cap='사내에 팀 이동설이 돈다.';}
       else {g='F';cap='지방 발령. 조용히 짐을 싸자.';}
-      gradeInfo={g,cap,pts:Math.round(pts)};
+      gradeInfo={g,cap,pts:Math.round(pts),missionOK:missionPassed()};
+      if(scrapeGain) scrapeGain.gain.value=0;
     }
   }
 
@@ -547,6 +755,12 @@ function update(dt){
   if(DEBUG){
     if(pressed['KeyK']) meter-=15;
     if(pressed['Digit0']) meter=100;
+    if(pressed['KeyI']) triggerIncident(boss.pts.head,900,10);
+    if(pressed['KeyG']){
+      const dx=GOAL_CX-boss.pts.chest.x;
+      for(const c of carriers)c.x+=dx;
+      for(const p of boss.list){p.x+=dx;p.px+=dx;}
+    }
     if(pressed['Digit9']){
       const dx=600;
       for(const c of carriers) c.x+=dx;
@@ -556,7 +770,7 @@ function update(dt){
 }
 
 /* ---------------- 렌더링 ---------------- */
-function draw(){
+function draw(dt){
   cx.save();
   cx.clearRect(0,0,VW,VH);
   const sky=cx.createLinearGradient(0,0,0,VH);
@@ -592,9 +806,10 @@ function draw(){
 
   if(state==='play'||state==='pause') drawHUD();
   if(state==='title') drawTitle();
-  if(state==='wake') drawWake();
-  if(state==='clear') drawClear();
+  if(state==='wake') drawWake(dt);
+  if(state==='clear') drawClear(dt);
   if(state==='pause') drawPause();
+  if(state==='play'&&incident) drawIncident(dt);
   cx.restore();
 }
 function drawBuildings(arr,par){
@@ -682,13 +897,32 @@ function drawDecos(){
     if(on){ cx.fillStyle='rgba(125,255,168,0.1)'; cx.beginPath(); cx.arc(cp.x,G_Y-250,26,0,7); cx.fill(); }
   }
   // 벤치
-  cx.fillStyle='#6b4f35'; cx.fillRect(5250,G_Y-34,110,10);
-  cx.fillStyle='#54483c'; cx.fillRect(5258,G_Y-24,10,24); cx.fillRect(5342,G_Y-24,10,24);
+  cx.fillStyle='#6b4f35'; cx.fillRect(5520,G_Y-34,110,10);
+  cx.fillStyle='#54483c'; cx.fillRect(5528,G_Y-24,10,24); cx.fillRect(5612,G_Y-24,10,24);
+  // 택시 대표 구간
+  if(!taxi.success){
+    cx.fillStyle=taxi.failed?'#55596a':'#e8bd34'; roundRect(taxi.x0,G_Y-108,taxi.x1-taxi.x0,100,22); cx.fill();
+    cx.fillStyle='#24304e'; cx.fillRect(taxi.x0+52,G_Y-100,168,42);
+    cx.fillStyle='#171c2d'; cx.beginPath(); cx.arc(taxi.x0+72,G_Y-8,25,0,7); cx.fill();
+    cx.beginPath(); cx.arc(taxi.x1-70,G_Y-8,25,0,7); cx.fill();
+    cx.strokeStyle=taxi.entered?'#7dffa8':'rgba(255,255,255,0.45)'; cx.lineWidth=4;
+    cx.strokeRect(taxi.x0+178,G_Y-94,118,80); cx.lineWidth=1;
+    cx.fillStyle='#17213a'; cx.font='bold 16px sans-serif'; cx.textAlign='center';
+    cx.fillText('TAXI',taxi.x0+105,G_Y-65);
+    if(!taxi.failed){
+      cx.fillStyle='#ffe9b8'; cx.font='bold 14px sans-serif';
+      cx.fillText(taxi.entered?'뒷문에 내려놓으세요!':'“어디까지 가세요?”',(taxi.x0+taxi.x1)/2,G_Y-128);
+    }
+  }
+  // 쓰레기봉투: 굴러온 병과 충돌하면 연쇄 사고
+  cx.fillStyle=trash.spilled?'#4f5360':'#262b38';
+  if(trash.spilled){
+    for(let i=0;i<7;i++){ cx.beginPath(); cx.arc(trash.x-30+i*10,G_Y-7-(i%2)*4,7,0,7); cx.fill(); }
+  } else { cx.beginPath(); cx.ellipse(trash.x,G_Y-15,20,24,0,0,7); cx.fill(); }
   // 소주병
   for(const b of bottles){
-    if(b.k) continue;
-    cx.fillStyle='#3fae6b'; cx.fillRect(b.x-4,G_Y-18,8,18);
-    cx.fillRect(b.x-2,G_Y-24,4,7);
+    cx.save(); cx.translate(b.x,G_Y-11); cx.rotate(b.rot||0);
+    cx.fillStyle=b.done?'#36744f':'#3fae6b'; cx.fillRect(-4,-9,8,18); cx.fillRect(-2,-14,4,7); cx.restore();
   }
   // 고양이
   const catx = catZone.spooked?catZone.runX:catZone.catX;
@@ -758,7 +992,7 @@ function drawBoss(){
   cx.fillStyle='rgba(232,120,110,0.55)';
   cx.beginPath(); cx.arc(hd.x-7,hd.y+4,3.4,0,7); cx.fill();
   cx.beginPath(); cx.arc(hd.x+7,hd.y+4,3.4,0,7); cx.fill();
-  const awake = state==='wake';
+  const awake = state==='wake'||eyeOpen.active;
   cx.strokeStyle='#3d3a45'; cx.lineWidth=2;
   if(awake){
     cx.fillStyle='#fff';
@@ -870,7 +1104,8 @@ function drawHUD(){
   cx.fillStyle='#2b3355'; roundRect(mx+38,my+4,mw,16,8); cx.fill();
   cx.fillStyle=fc; if(meter>1){ roundRect(mx+38,my+4,mw*meter/100,16,8); cx.fill(); }
   cx.fillStyle='#aeb9e6'; cx.font='bold 12px sans-serif'; cx.textAlign='left';
-  cx.fillText('부장님 숙면도',mx+38,my+33);
+  const stageName={deep:'숙면',light:'얕은 잠',half:'반수면',edge:'기상 직전'}[sleepStage()];
+  cx.fillText('부장님 숙면도 · '+stageName,mx+38,my+33);
   if(meter<28){
     cx.fillStyle='rgba(255,90,90,'+(0.10+0.08*Math.sin(titleT*9))+')';
     cx.fillRect(0,0,VW,VH);
@@ -889,7 +1124,7 @@ function drawHUD(){
   // 우측 상단 스탯
   cx.textAlign='right'; cx.fillStyle='rgba(223,230,255,0.85)'; cx.font='bold 14px sans-serif';
   const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
-  cx.fillText((mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   소음 '+noiseCnt+'회   기상 '+wakeCnt+'회', VW-24, 34);
+  cx.fillText((mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   소음 '+noiseCnt+'회   기상 '+wakeCnt+'회   클립 '+clipScore, VW-24, 34);
   cx.fillStyle='rgba(174,185,230,0.6)'; cx.font='12px sans-serif';
   cx.fillText('R 체크포인트 재시작 · P 일시정지 · M 음소거', VW-24, 54);
   // 그립 상태
@@ -912,6 +1147,45 @@ function drawHUD(){
     cx.font='bold 26px sans-serif'; cx.fillStyle='#ffd45e'; cx.textAlign='center';
     cx.fillText('⚠ 부장님이 뒤척인다…!',VW/2,170);
   }
+  if(eyeOpen.active){
+    cx.fillStyle='rgba(255,220,120,0.14)'; cx.fillRect(0,0,VW,VH);
+    cx.font='900 34px sans-serif'; cx.fillStyle='#ffe27d'; cx.textAlign='center';
+    cx.fillText('👀 움직이지 마세요  '+eyeOpen.t.toFixed(1),VW/2,205);
+  }
+  if(friendSave){
+    cx.font='900 27px sans-serif'; cx.fillStyle='#7dffa8'; cx.textAlign='center';
+    cx.fillText('혼자 버티는 중!  '+Math.max(0,3-friendSave.t).toFixed(1),VW/2,205);
+  }
+  if(silentZone.active){
+    cx.font='900 25px sans-serif'; cx.fillStyle='#b7c8ff'; cx.textAlign='center';
+    cx.fillText('🤫 SILENT ZONE  '+Math.ceil(silentZone.t)+'초',VW/2,245);
+  }
+  cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(VW-230,VH-92,206,34,10); cx.fill();
+  cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4'; cx.font='bold 13px sans-serif'; cx.textAlign='left';
+  cx.fillText('🎙 [V] 마이크 '+micStatus+(micEnabled?' '+Math.round(micLevel*100):''),VW-215,VH-70);
+  if(mission){
+    cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(VW/2-150,VH-48,300,34,10); cx.fill();
+    cx.fillStyle='#ffe9b8'; cx.textAlign='center'; cx.fillText('오늘의 미션 · '+mission.short,VW/2,VH-26);
+  }
+}
+function drawIncident(dt){
+  incident.t+=dt;
+  const a=clamp(Math.min(incident.t*6,(incident.dur-incident.t)*4),0,1);
+  cx.globalAlpha=a;
+  const y=incident.rescue?250:220;
+  cx.fillStyle=incident.rescue?'rgba(20,70,60,0.92)':'rgba(65,12,20,0.94)';
+  roundRect(VW/2-270,y-56,540,incident.rescue?106:150,16); cx.fill();
+  cx.strokeStyle=incident.rescue?'#7dffa8':'#ff7676'; cx.lineWidth=3; cx.stroke(); cx.lineWidth=1;
+  cx.textAlign='center'; cx.font='900 29px sans-serif'; cx.fillStyle=incident.rescue?'#baffcd':'#ff8c8c';
+  cx.fillText(incident.rescue?'🛟 '+incident.title:'⚠ 사고 발생 · '+incident.title,VW/2,y-17);
+  if(!incident.rescue&&incident.fp!==null){
+    cx.font='900 22px sans-serif'; cx.fillStyle='#fff';
+    cx.fillText('뒷사람 '+incident.bp+'%  :  '+incident.fp+'% 앞사람',VW/2,y+22);
+    cx.font='13px sans-serif'; cx.fillStyle='#ffd9a0';
+    cx.fillText('최근 1.5초 이동·당김·그립·거리·충돌 부위로 판정',VW/2,y+52);
+  }
+  cx.globalAlpha=1;
+  if(incident.t>=incident.dur) incident=null;
 }
 function drawGripChip(c,x,y){
   const on=c.grip;
@@ -948,7 +1222,9 @@ function drawTitle(){
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('물리 협동 프로토타입 v0.1 — 낙하 시 과실 비율이 자동 판정됩니다',VW/2,650);
+  cx.fillText('v0.2 — 행동 기반 과실 판정 · 구조 보너스 · 눈뜸 · 택시 · 오늘의 미션',VW/2,646);
+  cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
+  cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
 function drawBtn(x,y,w,h,t1,t2,hover){
   cx.fillStyle='rgba(31,39,80,0.95)'; roundRect(x,y,w,h,14); cx.fill();
@@ -962,8 +1238,8 @@ function topReason(side){
   for(const k in rs) if(rs[k]>bv){bv=rs[k];best=k;}
   return best?REASON_KO[best]:'혐의는 없으나 어쩐지 수상함';
 }
-function drawWake(){
-  wakeAnimT+=FDT;
+function drawWake(dt){
+  wakeAnimT+=dt;
   cx.fillStyle='rgba(30,6,10,'+clamp(wakeAnimT*1.5,0,0.86)+')'; cx.fillRect(0,0,VW,VH);
   if(wakeAnimT<0.5) return;
   cx.textAlign='center';
@@ -995,36 +1271,59 @@ function drawWake(){
   cx.font='bold 19px sans-serif'; cx.fillStyle='#ffe9b8';
   cx.fillText('R  체크포인트에서 계속     ·     T  처음부터',VW/2,by0+186);
 }
-function drawClear(){
-  clearT+=FDT;
-  cx.fillStyle='rgba(8,11,28,'+clamp(clearT*0.8,0,0.6)+')'; cx.fillRect(0,0,VW,VH);
+function reasonSummary(side){
+  const es=Object.entries(faults[side].counts).sort((a,b)=>b[1]-a[1]).slice(0,3);
+  return es.length?es.map(([k,n])=>(REASON_KO[k]||k)+' ×'+n):['특이 혐의 없음'];
+}
+function drawClear(dt){
+  clearT+=dt;
+  cx.fillStyle='rgba(8,11,28,'+clamp(clearT*0.8,0,0.78)+')'; cx.fillRect(0,0,VW,VH);
   cx.textAlign='center';
-  if(clearT>0.3){ cx.font='600 22px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText('띠링—',VW/2,150); }
-  if(clearT>1.3){ cx.font='600 20px sans-serif'; cx.fillStyle='#dfe6ff'; cx.fillText('사모님: "…또 회식이야?"',VW/2,192); }
-  if(clearT>2.4){ cx.font='600 20px sans-serif'; cx.fillStyle='#aeb9e6'; cx.fillText('부장님: "…나 안 취했어…"',VW/2,230); }
-  if(clearT>3.4 && gradeInfo){
+  if(clearT>0.3&&clearT<2.7){ cx.font='600 22px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText('띠링—',VW/2,150); }
+  if(clearT>1.0&&clearT<2.7){ cx.font='600 20px sans-serif'; cx.fillStyle='#dfe6ff'; cx.fillText('사모님: "…또 회식이야?"',VW/2,192); }
+  if(clearT>1.8&&clearT<2.7){ cx.font='600 20px sans-serif'; cx.fillStyle='#aeb9e6'; cx.fillText('부장님: "…나 안 취했어…"',VW/2,230); }
+  if(clearT>2.7&&gradeInfo){
     if(!gradeInfo.stamped){ gradeInfo.stamped=true; sStamp(); setTimeout(sFanfa,300); }
-    cx.fillStyle='rgba(12,16,38,0.94)'; roundRect(VW/2-330,270,660,330,18); cx.fill();
-    cx.strokeStyle='#5a6488'; cx.stroke();
-    cx.font='bold 24px sans-serif'; cx.fillStyle='#ffe9b8';
-    cx.fillText('─ 인사고과 정산 ─',VW/2,316);
-    cx.save(); cx.translate(VW/2+200,350); cx.rotate(-0.18);
-    const gc = gradeInfo.g==='S'?'#ffd45e':gradeInfo.g==='F'?'#ff6b6b':'#e2564b';
-    cx.strokeStyle=gc; cx.lineWidth=5; cx.beginPath(); cx.arc(0,0,52,0,7); cx.stroke();
-    cx.fillStyle=gc; cx.font='900 68px sans-serif'; cx.fillText(gradeInfo.g,0,24); cx.restore();
-    cx.textAlign='left'; cx.font='16px sans-serif'; cx.fillStyle='#dfe6ff';
-    const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
-    const lines=[
-      '배달 시간          '+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'  (기준 '+Math.floor(diff.par/60)+':'+String(diff.par%60).padStart(2,'0')+')',
-      '소음 발생          '+noiseCnt+'회',
-      '부장님 기상        '+wakeCnt+'회',
-      '과실 누계          뒷사람 '+Math.round(faults.back.total)+' : '+Math.round(faults.front.total)+' 앞사람'
-    ];
-    lines.forEach((l,i)=>cx.fillText(l,VW/2-290,360+i*32));
-    cx.textAlign='center'; cx.font='bold 19px sans-serif'; cx.fillStyle='#ffd9a0';
-    cx.fillText('“'+gradeInfo.cap+'”',VW/2,522);
-    cx.font='bold 17px sans-serif'; cx.fillStyle='#ffe9b8';
-    cx.fillText('T  다시 배달하기      Esc  타이틀로',VW/2,568);
+    const pct=faultPercent();
+    const accident=pct.front>=pct.back?'front':'back';
+    const rescue=rescues.front.score===rescues.back.score?'team':rescues.front.score>rescues.back.score?'front':'back';
+    const roleName=s=>s==='front'?'앞사람':s==='back'?'뒷사람':'공동 수상';
+    const gc=gradeInfo.g==='S'?'#ffd45e':gradeInfo.g==='F'?'#ff6b6b':'#e2564b';
+    cx.fillStyle='rgba(12,16,38,0.96)'; roundRect(100,56,1080,610,20); cx.fill();
+    cx.strokeStyle='#5a6488'; cx.lineWidth=2; cx.stroke(); cx.lineWidth=1;
+    cx.font='900 28px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText('회식 귀가 보고서',VW/2,96);
+    // 등급
+    cx.save(); cx.translate(205,194); cx.rotate(-0.12); cx.strokeStyle=gc; cx.lineWidth=6;
+    cx.beginPath(); cx.arc(0,0,65,0,7); cx.stroke(); cx.fillStyle=gc; cx.font='900 82px sans-serif'; cx.fillText(gradeInfo.g,0,29); cx.restore();
+    cx.fillStyle='#dfe6ff'; cx.font='bold 16px sans-serif'; cx.fillText(gradeInfo.cap,205,286);
+    // 사고왕
+    cx.fillStyle='rgba(85,25,36,0.72)'; roundRect(330,126,360,238,14); cx.fill();
+    cx.font='900 21px sans-serif'; cx.fillStyle='#ff9292'; cx.fillText('🏆 오늘의 사고왕',510,162);
+    cx.font='900 28px sans-serif'; cx.fillStyle='#fff'; cx.fillText(roleName(accident),510,202);
+    cx.font='bold 18px sans-serif'; cx.fillStyle='#ffd9a0'; cx.fillText('총 과실 '+pct[accident]+'%',510,234);
+    cx.textAlign='left'; cx.font='14px sans-serif'; cx.fillStyle='#eac8ca';
+    reasonSummary(accident).forEach((l,i)=>cx.fillText('• '+l,374,272+i*27));
+    // 구조왕
+    cx.fillStyle='rgba(21,74,65,0.72)'; roundRect(714,126,360,238,14); cx.fill();
+    cx.textAlign='center'; cx.font='900 21px sans-serif'; cx.fillStyle='#7dffa8'; cx.fillText('🛟 오늘의 구조왕',894,162);
+    cx.font='900 28px sans-serif'; cx.fillStyle='#fff'; cx.fillText(roleName(rescue),894,202);
+    const rescueScore=rescue==='team'?clipScore:rescues[rescue].score;
+    cx.font='bold 18px sans-serif'; cx.fillStyle='#baffcd'; cx.fillText('구조 점수 '+rescueScore,894,234);
+    cx.textAlign='left'; cx.font='14px sans-serif'; cx.fillStyle='#ccebdd';
+    const rc=rescue==='team'?[]:Object.entries(rescues[rescue].counts).slice(0,3);
+    (rc.length?rc.map(([k,n])=>k+' ×'+n):['함께 만든 기적']).forEach((l,i)=>cx.fillText('• '+l,758,272+i*27));
+    // 기록과 미션
+    const mm=Math.floor(runTime/60),ss=Math.floor(runTime%60);
+    cx.fillStyle='rgba(29,37,76,0.9)'; roundRect(150,398,930,164,14); cx.fill();
+    cx.textAlign='left'; cx.font='bold 17px sans-serif'; cx.fillStyle='#dfe6ff';
+    cx.fillText('📊 기록',182,435); cx.font='15px sans-serif';
+    cx.fillText('배달 '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0')+'   ·   숙면도 '+Math.round(meter)+'% 생존   ·   소음 '+noiseCnt+'회   ·   기상 '+wakeCnt+'회',182,470);
+    cx.fillText('과실  뒷사람 '+pct.back+'% : '+pct.front+'% 앞사람   ·   클립 점수 '+clipScore+'   ·   수동 재정비 '+manualResetCnt+'회',182,500);
+    cx.fillStyle=gradeInfo.missionOK?'#7dffa8':'#ff8d8d'; cx.font='bold 16px sans-serif';
+    cx.fillText((gradeInfo.missionOK?'✓ 미션 성공  ':'✕ 미션 실패  ')+mission.title+' — '+mission.desc,182,535);
+    cx.textAlign='center'; cx.fillStyle='#ffd9a0'; cx.font='bold 19px sans-serif';
+    cx.fillText('다시 하면 더 잘할 수 있을 것 같습니까?',VW/2,605);
+    cx.fillStyle='#ffe9b8'; cx.fillText('[T] 당연하지      [Esc] 타이틀로',VW/2,638);
   }
 }
 function drawPause(){
@@ -1049,11 +1348,11 @@ function metaInput(){
     }
     if(m) startGame(m);
   } else if(state==='play'){
-    if(pressed['KeyR']){ respawn(false); meter=Math.max(meter,40); toast('체크포인트에서 재정비!'); }
-    if(pressed['KeyP']||pressed['Escape']) state='pause';
+    if(pressed['KeyR']){ manualResetCnt++; respawn(false); toast('체크포인트에서 재정비! 숙면도는 회복되지 않습니다'); }
+    if(pressed['KeyP']||pressed['Escape']){ state='pause'; if(scrapeGain)scrapeGain.gain.value=0; }
   } else if(state==='pause'){
     if(pressed['KeyP']) state='play';
-    if(pressed['KeyR']){ respawn(false); meter=Math.max(meter,40); state='play'; }
+    if(pressed['KeyR']){ manualResetCnt++; respawn(false); state='play'; }
     if(pressed['Escape']) state='title';
   } else if(state==='wake'){
     if(pressed['KeyR']){ respawn(); state='play'; }
@@ -1063,6 +1362,7 @@ function metaInput(){
     if(pressed['Escape']) state='title';
   }
   if(pressed['KeyM']){ muted=!muted; if(master) master.gain.value=muted?0:0.5; }
+  if(pressed['KeyV']) toggleMic();
 }
 
 /* ---------------- 메인 루프 ---------------- */
@@ -1095,7 +1395,7 @@ function frame(t){
     clickPt=null;
     acc-=FDT; n++;
   }
-  draw();
+  draw(rdt);
 }
 requestAnimationFrame(frame);
 </script>
