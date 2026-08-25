@@ -29,7 +29,7 @@ if (matchMedia && matchMedia('(pointer: coarse)').matches)
 /* ---------------- 입력 ---------------- */
 const keys = {}, pressed = {};
 const GAMEKEYS = new Set(['KeyA','KeyD','KeyW','KeyS','KeyF','ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
-  'ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyV','KeyP','KeyG','KeyI','Escape','Enter','Digit1','Digit2','KeyK','Digit9','Digit0','Space']);
+  'ShiftLeft','ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyV','KeyP','KeyG','KeyI','Escape','Enter','Digit1','Digit2','KeyK','Digit9','Digit0','Space']);
 window.addEventListener('keydown',e=>{
   if (GAMEKEYS.has(e.code)) e.preventDefault();
   if (!keys[e.code]) pressed[e.code]=true;
@@ -369,7 +369,7 @@ class Carrier{
   }
 }
 const KM_BACK  = {L:'KeyA',R:'KeyD',C:'KeyS',J:['KeyW'],G:['KeyF']};
-const KM_FRONT = {L:'ArrowLeft',R:'ArrowRight',C:'ArrowDown',J:['ArrowUp'],G:['ShiftRight','KeyL']};
+const KM_FRONT = {L:'ArrowLeft',R:'ArrowRight',C:'ArrowDown',J:['ArrowUp'],G:['ShiftLeft','ShiftRight','KeyL']};
 let carriers=[];
 
 /* ---------------- 게임 상태 ---------------- */
@@ -1218,7 +1218,7 @@ function drawTitle(){
   cx.fillText('A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
   cx.fillStyle='#3ec9a7'; cx.font='bold 17px sans-serif'; cx.fillText('🟩 앞사람',VW/2-380,540);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText('← / → 이동     ↑ 점프     ↓ 숙이기     Shift(오른쪽) 그립 잡기·놓기',VW/2-380,570);
+  cx.fillText('← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 그립 잡기·놓기',VW/2-380,570);
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
