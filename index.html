@@ -1,20 +1,92 @@
 <meta charset="utf-8">
-<title>부장님이 잠드셨다 v0.2</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>부장님이 잠드셨다 v0.5</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
-    font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
+    overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
   #wrap{position:fixed;inset:0;display:grid;place-items:center;background:#0b1026}
   canvas{width:min(100vw,calc(100vh*1.77778));max-height:100vh;display:block}
-  #touchNote{position:fixed;left:0;right:0;bottom:0;padding:10px 14px;text-align:center;
-    background:#1c2447;color:#ffd9a0;font-size:14px;display:none;z-index:9}
+  #touchControls{position:fixed;inset:0;z-index:20;display:none;pointer-events:none;
+    touch-action:none;-webkit-user-select:none;user-select:none}
+  body.touch #touchControls{display:block}
+  .controlSide{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));display:flex;
+    align-items:flex-end;gap:8px;visibility:hidden;opacity:0;transition:opacity .15s}
+  #touchControls.can-move .controlSide{visibility:visible;opacity:1}
+  .controlSide.back{left:max(8px,env(safe-area-inset-left))}
+  .controlSide.front{right:max(8px,env(safe-area-inset-right));flex-direction:row-reverse}
+  .pad{position:relative;width:158px;height:106px;pointer-events:none}
+  .touchBtn{position:absolute;width:50px;height:50px;border:1px solid rgba(223,230,255,.4);
+    border-radius:14px;background:rgba(20,28,62,.78);color:#fff;font:800 20px/1 system-ui;
+    box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:auto;touch-action:none;
+    -webkit-tap-highlight-color:transparent}
+  .touchBtn:active,.touchBtn.active{transform:scale(.94);background:rgba(92,112,190,.9)}
+  .pad .up{left:54px;top:0}.pad .left{left:0;bottom:0}.pad .down{left:54px;bottom:0}.pad .right{right:0;bottom:0}
+  .gripBtn{position:relative;width:62px;height:62px;border-radius:50%;font-size:13px;line-height:1.15}
+  .back .touchBtn{border-color:rgba(79,142,247,.75)}
+  .front .touchBtn{border-color:rgba(62,201,167,.75)}
+  .back .gripBtn{background:rgba(44,83,153,.88)}
+  .front .gripBtn{background:rgba(28,126,103,.88)}
+  .sideLabel{position:absolute;top:-20px;left:0;right:0;color:#dfe6ff;text-align:center;
+    font:800 12px/1 system-ui;text-shadow:0 1px 4px #000}
+  #touchMenu{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);
+    display:none;gap:7px;pointer-events:none}
+  #touchMenu.visible{display:flex}
+  #touchMenu .touchBtn{position:relative;width:auto;min-width:62px;height:34px;padding:0 12px;
+    border-radius:17px;font-size:12px;background:rgba(12,17,42,.82)}
+  #rotateHint{position:absolute;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+    display:none;padding:7px 14px;border-radius:18px;background:rgba(12,17,42,.9);color:#ffd9a0;
+    font:800 12px/1 system-ui;white-space:nowrap}
+  @media (orientation:portrait){
+    body.touch #wrap{place-items:start center;padding-top:52px;box-sizing:border-box}
+    body.touch canvas{width:100vw;max-height:none}
+    body.touch #rotateHint{display:block}
+    body.touch #touchMenu{top:auto;bottom:112px}
+    body.touch .pad{width:108px;height:74px}
+    body.touch .touchBtn{width:34px;height:34px;border-radius:10px;font-size:14px}
+    body.touch .pad .up,body.touch .pad .down{left:37px}
+    body.touch .gripBtn{width:42px;height:42px;font-size:10px}
+  }
+  @media (max-width:700px){
+    .pad{width:134px;height:90px}.touchBtn{width:42px;height:42px;border-radius:12px;font-size:17px}
+    .pad .up{left:46px}.pad .down{left:46px}.gripBtn{width:52px;height:52px;font-size:11px}
+  }
 </style>
 <div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
-<div id="touchNote">⌨️ 이 게임은 키보드 전용입니다. PC에서 플레이해 주세요.</div>
+<div id="touchControls" aria-label="모바일 게임 조작부">
+  <div id="rotateHint">📱 가로로 돌리면 더 편하게 플레이할 수 있습니다</div>
+  <div class="controlSide back">
+    <span class="sideLabel">🟦 뒷사람</span>
+    <div class="pad">
+      <button class="touchBtn up" data-code="KeyW" aria-label="뒷사람 점프">▲</button>
+      <button class="touchBtn left" data-code="KeyA" aria-label="뒷사람 왼쪽">◀</button>
+      <button class="touchBtn down" data-code="KeyS" aria-label="뒷사람 숙이기">▼</button>
+      <button class="touchBtn right" data-code="KeyD" aria-label="뒷사람 오른쪽">▶</button>
+    </div>
+    <button class="touchBtn gripBtn" data-code="KeyF" aria-label="뒷사람 그립">그립</button>
+  </div>
+  <div class="controlSide front">
+    <span class="sideLabel">🟩 앞사람</span>
+    <div class="pad">
+      <button class="touchBtn up" data-code="ArrowUp" aria-label="앞사람 점프">▲</button>
+      <button class="touchBtn left" data-code="ArrowLeft" aria-label="앞사람 왼쪽">◀</button>
+      <button class="touchBtn down" data-code="ArrowDown" aria-label="앞사람 숙이기">▼</button>
+      <button class="touchBtn right" data-code="ArrowRight" aria-label="앞사람 오른쪽">▶</button>
+    </div>
+    <button class="touchBtn gripBtn" data-code="KeyL" aria-label="앞사람 그립">그립</button>
+  </div>
+  <div id="touchMenu">
+    <button class="touchBtn" data-menu-index="0"></button>
+    <button class="touchBtn" data-menu-index="1"></button>
+    <button class="touchBtn" data-menu-index="2"></button>
+  </div>
+</div>
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 사고 밀도 강화 프로토타입 v0.2
-   1인(양손 연습) / 2인(키보드 분할) · 커스텀 Verlet 물리
+   부장님이 잠드셨다 — 모바일 대응 30레벨 캠페인 v0.5
+   1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
 const VW = 1280, VH = 720;
@@ -23,21 +95,50 @@ const lerp  = (a,b,t)=>a+(b-a)*t;
 const rnd   = (a,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
 const dist2 = (ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return Math.sqrt(dx*dx+dy*dy)};
 const DEBUG = location.search.indexOf('debug')>=0;
-if (matchMedia && matchMedia('(pointer: coarse)').matches)
-  document.getElementById('touchNote').style.display='block';
+const TOUCH_UI = (window.matchMedia&&matchMedia('(pointer: coarse)').matches)||location.search.indexOf('touch')>=0;
+document.body.classList.toggle('touch',TOUCH_UI);
 
 /* ---------------- 입력 ---------------- */
 const keys = {}, pressed = {};
 const GAMEKEYS = new Set(['KeyA','KeyD','KeyW','KeyS','KeyF','ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
   'ShiftLeft','ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyV','KeyP','KeyG','KeyI','Escape','Enter','Digit1','Digit2','KeyK','Digit9','Digit0','Space']);
+function setInput(code,down){
+  if(down){ if(!keys[code]) pressed[code]=true; keys[code]=true; ensureAudio(); }
+  else keys[code]=false;
+}
 window.addEventListener('keydown',e=>{
   if (GAMEKEYS.has(e.code)) e.preventDefault();
-  if (!keys[e.code]) pressed[e.code]=true;
-  keys[e.code]=true; ensureAudio();
+  setInput(e.code,true);
 });
-window.addEventListener('keyup',e=>{ keys[e.code]=false; });
+window.addEventListener('keyup',e=>setInput(e.code,false));
+
+const virtualPointers=new Map(), virtualCounts={};
+function releaseVirtualPointer(pointerId){
+  const hit=virtualPointers.get(pointerId); if(!hit) return;
+  virtualPointers.delete(pointerId);
+  hit.btn.classList.remove('active');
+  virtualCounts[hit.code]=Math.max(0,(virtualCounts[hit.code]||1)-1);
+  if(!virtualCounts[hit.code]) setInput(hit.code,false);
+}
+if(TOUCH_UI){
+  for(const btn of document.querySelectorAll('.touchBtn')){
+    btn.addEventListener('pointerdown',e=>{
+      const code=btn.dataset.code; if(!code) return;
+      e.preventDefault();
+      try{ btn.setPointerCapture(e.pointerId); }catch(_){}
+      virtualPointers.set(e.pointerId,{code,btn});
+      virtualCounts[code]=(virtualCounts[code]||0)+1;
+      btn.classList.add('active'); setInput(code,true);
+    });
+    btn.addEventListener('pointerup',e=>{ e.preventDefault(); releaseVirtualPointer(e.pointerId); });
+    btn.addEventListener('pointercancel',e=>releaseVirtualPointer(e.pointerId));
+    btn.addEventListener('lostpointercapture',e=>releaseVirtualPointer(e.pointerId));
+  }
+  window.addEventListener('contextmenu',e=>e.preventDefault());
+}
 window.addEventListener('blur',()=>{
   for(const k in keys) keys[k]=false;
+  for(const pointerId of [...virtualPointers.keys()]) releaseVirtualPointer(pointerId);
   if(state==='play') state='pause';
   if(scrapeGain) scrapeGain.gain.value=0;
 });
@@ -127,28 +228,103 @@ const G_Y = 580, WORLD = 7200, GOAL_X0 = 6600, GOAL_X1 = 7040, GOAL_CX = 6820;
 const GRAV = 2000, VG = 1900;
 const FDT = 1/60, SUB = 3, SDT = FDT/SUB, ITER = 6;
 
+const LEVELS = [
+  {name:'회식 탈출', desc:'원본 귀갓길. 기본기를 익히세요.', dmg:1,    drain:1,    par:220, grip:95, slip:0.12, stir:1,    eye:30, cat:130, passive:0,    start:100, cps:3},
+  {name:'골목의 턱', desc:'낮은 턱이 운반 박자를 흔듭니다.', dmg:1.08, drain:1.05, par:210, grip:93, slip:0.115,stir:0.94, eye:32, cat:125, passive:0,    start:100, cps:3},
+  {name:'간판 지옥', desc:'낮은 천장과 단차가 동시에 옵니다.', dmg:1.16, drain:1.12, par:200, grip:91, slip:0.105,stir:0.88, eye:35, cat:120, passive:0.015,start:100,cps:3},
+  {name:'고양이 골목', desc:'속도를 내면 사고가 연쇄됩니다.', dmg:1.25, drain:1.20, par:190, grip:88, slip:0.098,stir:0.81, eye:38, cat:110, passive:0.025,start:98, cps:3},
+  {name:'숙취 육교', desc:'오르막과 천장이 그립을 뜯어냅니다.', dmg:1.35, drain:1.30, par:180, grip:85, slip:0.090,stir:0.74, eye:42, cat:100, passive:0.04, start:96, cps:2},
+  {name:'택시 거부', desc:'회복 구간이 줄고 뒤척임이 빨라집니다.',dmg:1.48, drain:1.42, par:170, grip:82, slip:0.082,stir:0.67, eye:46, cat:92,  passive:0.055,start:94, cps:2},
+  {name:'새벽 세 시', desc:'부장님이 얕은 잠에서 시작합니다.', dmg:1.62, drain:1.55, par:160, grip:79, slip:0.074,stir:0.60, eye:50, cat:84,  passive:0.075,start:90, cps:2},
+  {name:'인사평가 전야',desc:'실수 한 번이 숙면도를 크게 깎습니다.', dmg:1.78, drain:1.68, par:150, grip:76, slip:0.067,stir:0.54, eye:56, cat:76,  passive:0.10, start:86, cps:2},
+  {name:'임원 관문', desc:'체크포인트는 출발점 하나뿐입니다.', dmg:1.95, drain:1.82, par:140, grip:73, slip:0.060,stir:0.48, eye:63, cat:68,  passive:0.13, start:82, cps:1},
+  {name:'월요일 예행연습',desc:'첫 번째 관문. 이제 진짜 귀가가 시작됩니다.', dmg:2.15, drain:2.00, par:130, grip:70, slip:0.052,stir:0.42, eye:70, cat:60, passive:0.17, start:78, cps:1},
+  {name:'막차 끊김', desc:'택시도 막차도 없습니다. 발밑만 믿으세요.', dmg:2.20, drain:2.05, par:128, grip:69, slip:0.050,stir:0.41, eye:71, cat:59, passive:0.18, start:78, cps:1},
+  {name:'편의점 불빛', desc:'좁은 통로에서 부장님이 더 자주 뒤척입니다.', dmg:2.26, drain:2.10, par:127, grip:68, slip:0.049,stir:0.40, eye:72, cat:58, passive:0.18, start:77, cps:1},
+  {name:'공사장 우회', desc:'턱과 자재가 안전한 보폭을 빼앗습니다.', dmg:2.32, drain:2.16, par:126, grip:67, slip:0.047,stir:0.39, eye:73, cat:57, passive:0.19, start:76, cps:1},
+  {name:'배달 오토바이', desc:'급하게 움직일수록 손이 더 빨리 미끄러집니다.', dmg:2.38, drain:2.22, par:125, grip:66, slip:0.046,stir:0.38, eye:74, cat:56, passive:0.19, start:75, cps:1},
+  {name:'경찰 검문', desc:'낮은 구조물 아래에서 호흡을 맞추세요.', dmg:2.44, drain:2.28, par:124, grip:65, slip:0.045,stir:0.37, eye:75, cat:55, passive:0.20, start:74, cps:1},
+  {name:'비상계단', desc:'연속 단차가 앞뒤 사람의 박자를 시험합니다.', dmg:2.50, drain:2.34, par:123, grip:64, slip:0.043,stir:0.36, eye:76, cat:54, passive:0.20, start:73, cps:1},
+  {name:'취객의 합창', desc:'소음 한 번이 연쇄 사고로 이어집니다.', dmg:2.56, drain:2.40, par:122, grip:63, slip:0.042,stir:0.35, eye:77, cat:53, passive:0.21, start:72, cps:1},
+  {name:'폭우 전조', desc:'그립 한계가 줄어들어 짧게 잡아야 합니다.', dmg:2.62, drain:2.46, par:121, grip:62, slip:0.041,stir:0.34, eye:78, cat:52, passive:0.21, start:71, cps:1},
+  {name:'새벽 시장', desc:'골목 전체가 장애물이 되기 시작합니다.', dmg:2.68, drain:2.52, par:120, grip:61, slip:0.039,stir:0.33, eye:79, cat:51, passive:0.22, start:70, cps:1},
+  {name:'강남대로 결승', desc:'두 번째 관문. 실수할 여유가 거의 없습니다.', dmg:2.74, drain:2.58, par:119, grip:60, slip:0.038,stir:0.32, eye:80, cat:50, passive:0.22, start:69, cps:1},
+  {name:'대리기사 실종', desc:'시작부터 얕은 잠입니다. 천천히 전진하세요.', dmg:2.80, drain:2.64, par:118, grip:59, slip:0.037,stir:0.31, eye:81, cat:49, passive:0.23, start:68, cps:1},
+  {name:'지하도 역풍', desc:'낮은 천장과 턱이 번갈아 덮칩니다.', dmg:2.86, drain:2.70, par:117, grip:58, slip:0.036,stir:0.30, eye:82, cat:48, passive:0.23, start:67, cps:1},
+  {name:'인사팀 전화', desc:'눈을 뜨는 구간이 길어지고 잦아집니다.', dmg:2.92, drain:2.76, par:116, grip:57, slip:0.035,stir:0.29, eye:83, cat:47, passive:0.24, start:66, cps:1},
+  {name:'회장님 목격', desc:'고양이 앞에서는 거의 멈춰야 합니다.', dmg:2.98, drain:2.82, par:115, grip:56, slip:0.034,stir:0.28, eye:84, cat:46, passive:0.24, start:65, cps:1},
+  {name:'동틀 무렵', desc:'남은 숙면도와 시간이 동시에 줄어듭니다.', dmg:3.04, drain:2.88, par:114, grip:55, slip:0.033,stir:0.27, eye:85, cat:45, passive:0.25, start:64, cps:1},
+  {name:'월요일 출근길', desc:'귀가 행렬과 출근 행렬이 충돌합니다.', dmg:3.10, drain:2.94, par:113, grip:54, slip:0.032,stir:0.26, eye:86, cat:44, passive:0.26, start:63, cps:1},
+  {name:'감사팀 관문', desc:'작은 충격도 치명적입니다. 놓지 마세요.', dmg:3.16, drain:3.00, par:112, grip:53, slip:0.030,stir:0.25, eye:87, cat:42, passive:0.27, start:62, cps:1},
+  {name:'승진 심사대', desc:'모든 구간에서 완벽한 합이 필요합니다.', dmg:3.24, drain:3.08, par:111, grip:52, slip:0.029,stir:0.24, eye:89, cat:40, passive:0.28, start:61, cps:1},
+  {name:'대표이사 앞', desc:'마지막 문턱. 한 번의 방심도 허용하지 않습니다.', dmg:3.32, drain:3.16, par:110, grip:51, slip:0.027,stir:0.22, eye:91, cat:37, passive:0.29, start:60, cps:1},
+  {name:'전설의 귀가', desc:'30단계 최종전. 부장님을 집까지 배달하세요.', dmg:3.40, drain:3.24, par:108, grip:50, slip:0.025,stir:0.20, eye:92, cat:34, passive:0.30, start:60, cps:1}
+];
+
+// 각 레벨에서 새로 추가되며, 상위 레벨에는 누적되는 장애물입니다.
+const LEVEL_HAZARDS = [
+  [],
+  [{x:520,y:G_Y-22,w:120,h:22},{x:2350,y:G_Y-26,w:130,h:26},{x:6020,y:G_Y-28,w:110,h:28}],
+  [{x:1835,y:G_Y-186,w:170,h:66,tag:'danger'},{x:5350,y:G_Y-114,w:150,h:66,tag:'danger'}],
+  [{x:2940,y:G_Y-30,w:70,h:30},{x:3010,y:G_Y-54,w:70,h:54},{x:3400,y:G_Y-64,w:90,h:64}],
+  [{x:2520,y:G_Y-114,w:160,h:66,tag:'danger'},{x:5920,y:G_Y-114,w:150,h:66,tag:'danger'}],
+  [{x:1085,y:G_Y-32,w:55,h:32},{x:2225,y:G_Y-46,w:65,h:46},{x:5640,y:G_Y-58,w:80,h:58}],
+  [{x:4100,y:G_Y-216,w:150,h:48,tag:'danger'},{x:4480,y:G_Y-216,w:150,h:48,tag:'danger'}],
+  [{x:3150,y:G_Y-42,w:70,h:42},{x:3220,y:G_Y-68,w:70,h:68},{x:6300,y:G_Y-70,w:80,h:70}],
+  [{x:6200,y:G_Y-136,w:150,h:66,tag:'danger'},{x:3510,y:G_Y-114,w:120,h:66,tag:'danger'}],
+  [{x:6380,y:G_Y-26,w:55,h:26},{x:6435,y:G_Y-52,w:55,h:52},{x:6490,y:G_Y-78,w:70,h:78},{x:6410,y:G_Y-192,w:150,h:66,tag:'danger'}],
+  [{x:710,y:G_Y-36,w:48,h:36}],
+  [{x:1340,y:G_Y-142,w:150,h:50,tag:'danger'}],
+  [{x:2780,y:G_Y-40,w:80,h:40}],
+  [{x:2260,y:G_Y-128,w:140,h:40,tag:'danger'}],
+  [{x:3440,y:G_Y-52,w:76,h:52}],
+  [{x:4820,y:G_Y-160,w:130,h:44,tag:'danger'}],
+  [{x:5500,y:G_Y-36,w:96,h:36}],
+  [{x:600,y:G_Y-140,w:140,h:46,tag:'danger'}],
+  [{x:1400,y:G_Y-52,w:72,h:52}],
+  [{x:3320,y:G_Y-148,w:130,h:42,tag:'danger'}],
+  [{x:5010,y:G_Y-50,w:82,h:50}],
+  [{x:2700,y:G_Y-146,w:130,h:42,tag:'danger'}],
+  [{x:760,y:G_Y-44,w:58,h:44}],
+  [{x:3510,y:G_Y-156,w:120,h:42,tag:'danger'}],
+  [{x:5300,y:G_Y-56,w:84,h:56}],
+  [{x:970,y:G_Y-160,w:110,h:40,tag:'danger'}],
+  [{x:2400,y:G_Y-48,w:68,h:48}],
+  [{x:6070,y:G_Y-160,w:105,h:42,tag:'danger'}],
+  [{x:4300,y:G_Y-60,w:82,h:60}],
+  [{x:5880,y:G_Y-164,w:110,h:42,tag:'danger'}]
+];
+
 const solids = [];
 function box(x,y,w,h,tag){ solids.push({x,y,w,h,tag:tag||''}); return solids[solids.length-1]; }
-box(-300, G_Y, WORLD+600, 240, 'ground');
-box(820,  G_Y-22, 260, 22, 'curb');
-box(1150, G_Y-114, 170, 66, 'banner');
-for(let i=0;i<3;i++) box(1560+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
-box(1698, G_Y-72, 462, 72, 'plate');
-for(let i=0;i<2;i++) box(2160+i*46, G_Y-(48-24*i), 46, 48-24*i, 'stair');
-box(3080, G_Y-22, 120, 22, 'curb');
-box(3260, G_Y-40, 140, 40, 'curb');
-for(let i=0;i<5;i++) box(3650+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
-box(3880, G_Y-120, 900, 24, 'bridge');
-for(let i=0;i<4;i++) box(4780+i*46, G_Y-(96-24*i), 46, 96-24*i, 'stair');
-box(4060, 350, 90, 62, 'lamp');
-box(4420, 350, 90, 62, 'lamp');
-box(5750, G_Y-114, 170, 66, 'banner');
-box(6150, G_Y-22, 200, 22, 'curb');
+function buildLevelWorld(level){
+  solids.length=0;
+  box(-300, G_Y, WORLD+600, 240, 'ground');
+  box(820,  G_Y-22, 260, 22, 'curb');
+  box(1150, G_Y-114, 170, 66, 'banner');
+  for(let i=0;i<3;i++) box(1560+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
+  box(1698, G_Y-72, 462, 72, 'plate');
+  for(let i=0;i<2;i++) box(2160+i*46, G_Y-(48-24*i), 46, 48-24*i, 'stair');
+  box(3080, G_Y-22, 120, 22, 'curb');
+  box(3260, G_Y-40, 140, 40, 'curb');
+  for(let i=0;i<5;i++) box(3650+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
+  box(3880, G_Y-120, 900, 24, 'bridge');
+  for(let i=0;i<4;i++) box(4780+i*46, G_Y-(96-24*i), 46, 96-24*i, 'stair');
+  box(4060, 350, 90, 62, 'lamp');
+  box(4420, 350, 90, 62, 'lamp');
+  box(5750, G_Y-114, 170, 66, 'banner');
+  box(6150, G_Y-22, 200, 22, 'curb');
+  for(let i=1;i<level;i++) for(const h of LEVEL_HAZARDS[i]) box(h.x,h.y,h.w,h.h,h.tag||'level');
+}
+buildLevelWorld(1);
 
 const CHECKPOINTS = [{x:360},{x:3500},{x:5150}];
 const catZone = {x0:2700, x1:2980, catX:2860, spooked:false, runX:0};
 let bottles = [];
-function resetBottles(){ bottles=[2470,2515,2552,5470,5510].map(x=>({x,k:false,vx:0,rot:0,done:false})); }
+function resetBottles(){
+  const extra=[1040,2920,3190,3480,5680,6110,6360].slice(0,Math.max(0,currentLevel-3));
+  bottles=[2470,2515,2552,5470,5510,...extra].map(x=>({x,k:false,vx:0,rot:0,done:false}));
+}
 
 /* 배경 프리컴퓨트 */
 const starsA=[]; for(let i=0;i<90;i++) starsA.push({x:Math.random()*VW,y:Math.random()*380,r:Math.random()*1.4+0.4,tw:Math.random()*6});
@@ -209,6 +385,16 @@ function collidePt(p){
       // 모서리 관용: 옆에서 밀렸는데 윗면 근처면 위로 올려보냄
       if(Math.abs(dx)>Math.abs(dy) && p.y-p.r < s.y+14 && vy>=-40){ p.y=s.y-p.r; }
       else { p.x=nx+dx/d*p.r; p.y=ny+dy/d*p.r; }
+    } else if(s.tag==='danger'){
+      cx.fillStyle='#6b2c3d'; cx.fillRect(s.x,s.y,s.w,s.h);
+      cx.fillStyle='#ff6b6b'; cx.fillRect(s.x,s.y,s.w,4);
+      cx.fillStyle='rgba(255,214,140,0.35)';
+      for(let x=s.x-10;x<s.x+s.w;x+=24){
+        cx.beginPath(); cx.moveTo(x,s.y+s.h); cx.lineTo(x+10,s.y+s.h); cx.lineTo(x+28,s.y); cx.lineTo(x+18,s.y); cx.closePath(); cx.fill();
+      }
+    } else if(s.tag==='level'){
+      cx.fillStyle='#4b3548'; cx.fillRect(s.x,s.y,s.w,s.h);
+      cx.fillStyle='#c85568'; cx.fillRect(s.x,s.y,s.w,4);
     } else {
       const upPen=p.y-s.y+p.r, downPen=s.y+s.h-p.y+p.r, lPen=p.x-s.x+p.r, rPen=s.x+s.w-p.x+p.r;
       const m=Math.min(upPen,downPen,lPen,rPen);
@@ -353,7 +539,7 @@ class Carrier{
       else if(near){ this.grip=true; lastGripChange[this.side()]=runTime; onRegrip(this.side()); sChime(); }
     }
     // 과신전 슬립
-    if(this.grip && this.stretch>95){ this.slipT+=dt; if(this.slipT>0.12){
+    if(this.grip && this.stretch>diff.grip){ this.slipT+=dt; if(this.slipT>diff.slip){
       this.grip=false; this.slipT=0; lastGripChange[this.side()]=runTime; gripDropCnt++;
       addFault(this.side(),12,'slip'); sSlip();
       toast('⚠ '+this.label+' 손이 미끄러졌다!'); shake=8;
@@ -373,7 +559,8 @@ const KM_FRONT = {L:'ArrowLeft',R:'ArrowRight',C:'ArrowDown',J:['ArrowUp'],G:['S
 let carriers=[];
 
 /* ---------------- 게임 상태 ---------------- */
-let state='title', mode=null, diff={dmg:1,drain:1,par:220};
+let state='title', mode=null, currentLevel=1, levelCfg=LEVELS[0], campaignComplete=false;
+let diff={dmg:1,drain:1,par:220,grip:95,slip:0.12,stir:1,eye:30,cat:130,passive:0,start:100};
 let meter=100, runTime=0, noiseCnt=0, wakeCnt=0, cpIdx=0;
 let faults={front:{total:0,reasons:{},counts:{}}, back:{total:0,reasons:{},counts:{}}};
 let shake=0, camX=0, timeScale=1, slowT=0;
@@ -487,7 +674,19 @@ function bossSay(txt,dur){ bossBubble={txt,t:0,dur:dur||2.2}; }
 
 function startGame(m){
   mode=m;
-  diff = m==='solo' ? {dmg:0.72,drain:0.72,par:280} : {dmg:1,drain:1,par:220};
+  campaignComplete=false;
+  startLevel(1);
+}
+function startLevel(level){
+  currentLevel=clamp(level,1,LEVELS.length); levelCfg=LEVELS[currentLevel-1];
+  const assist=mode==='solo'?0.72:1;
+  diff={
+    dmg:levelCfg.dmg*assist, drain:levelCfg.drain*assist,
+    par:Math.round(levelCfg.par*(mode==='solo'?1.27:1)),
+    grip:levelCfg.grip, slip:levelCfg.slip, stir:levelCfg.stir,
+    eye:levelCfg.eye, cat:levelCfg.cat, passive:levelCfg.passive*assist, start:levelCfg.start
+  };
+  buildLevelWorld(currentLevel);
   runTime=0; noiseCnt=0; wakeCnt=0; cpIdx=0;
   faults={front:{total:0,reasons:{},counts:{}}, back:{total:0,reasons:{},counts:{}}};
   actionHistory={front:[],back:[]}; lastGripChange={front:-99,back:-99};
@@ -500,11 +699,12 @@ function startGame(m){
   trash={x:2635,spilled:false}; taxi={x0:4920,x1:5280,active:true,entered:false,t:0,success:false,failed:false};
   mission=MISSIONS[(Math.random()*MISSIONS.length)|0];
   resetBottles(); catZone.spooked=false;
-  meter=100; clearT=-1; gradeInfo=null; toasts=[]; particles=[];
+  meter=diff.start; clearT=-1; gradeInfo=null; toasts=[]; particles=[];
   respawn(true); state='play';
-  nextStir=runTime+rnd(14,22);
+  nextStir=runTime+rnd(14,22)*diff.stir;
+  toast('LEVEL '+currentLevel+' — '+levelCfg.name+': '+levelCfg.desc);
   toast('오늘의 미션 — '+mission.title+': '+mission.desc);
-  toast(m==='solo'?'연습 모드: 왼손이 뒷사람, 오른손이 앞사람!':'협동 모드: 서로 탓할 준비 되셨습니까');
+  if(currentLevel===1) toast(mode==='solo'?'연습 모드: 왼손이 뒷사람, 오른손이 앞사람!':'협동 모드: 서로 탓할 준비 되셨습니까');
 }
 function respawn(fullMeter){
   const cp=CHECKPOINTS[cpIdx];
@@ -514,7 +714,7 @@ function respawn(fullMeter){
   ];
   const f=carriers[1].anchor(), b=carriers[0].anchor();
   buildBoss(f.x,f.y,b.x,b.y);
-  if(fullMeter!==false) meter = wakeCnt===0?100:66;
+  if(fullMeter!==false) meter = wakeCnt===0?diff.start:Math.min(diff.start,66);
   actionHistory={front:[],back:[]}; lastGripChange={front:-99,back:-99};
   friendSave=null; bothLoose=false; bothLooseAt=-99; nearMissArmed=false; nearMissT=0; incident=null;
   timeScale=1; slowT=0; bossBubble=null;
@@ -525,6 +725,7 @@ function respawn(fullMeter){
 function update(dt){
   if(state!=='play') return;
   runTime+=dt; sinceDmg+=dt;
+  if(diff.passive>0){ meter-=diff.passive*dt; sinceDmg=0; }
   if(incidentCd>0) incidentCd-=dt;
   if(micHitCd>0) micHitCd-=dt;
   if(nearMissT>0){ nearMissT-=dt; if(nearMissT<=0) nearMissArmed=false; }
@@ -563,7 +764,7 @@ function update(dt){
   if(gripCount<2&&head.y>G_Y-45&&headVy>100){ nearMissArmed=true; nearMissT=0.65; }
 
   // 수면 단계: 반수면에서는 갑자기 눈을 뜨며, 입력하면 추가 피해
-  if(!eyeOpen.active&&meter<30&&runTime>eyeOpen.next){
+  if(!eyeOpen.active&&meter<diff.eye&&runTime>eyeOpen.next){
     eyeOpen.active=true; eyeOpen.t=rnd(2.2,3); eyeOpen.moved=false; eyeOpen.penaltyCd=0;
     toast('👀 움직이지 마세요.'); bossSay('……',eyeOpen.t); sGroan();
   }
@@ -575,7 +776,7 @@ function update(dt){
       toast('👀 들켰습니다! 움직이지 마세요'); shake=4;
     }
     if(eyeOpen.t<=0){
-      eyeOpen.active=false; eyeOpen.next=runTime+rnd(15,24);
+      eyeOpen.active=false; eyeOpen.next=runTime+rnd(15,24)*diff.stir;
       if(!eyeOpen.moved) addRescue('team','눈치 만점',100);
       bossSay('…zzz',1.4); sSnore();
     }
@@ -622,7 +823,7 @@ function update(dt){
   // 고양이
   if(!catZone.spooked){
     for(const c of carriers){
-      if(c.x>catZone.x0&&c.x<catZone.x1&&Math.abs(c.vx)>130){
+      if(c.x>catZone.x0&&c.x<catZone.x1&&Math.abs(c.vx)>diff.cat){
         catZone.spooked=true; catZone.runX=catZone.catX;
         sMeow(); meter-=8*diff.drain; noiseCnt++; sinceDmg=0;
         addFault(c.side(),8,'cat'); shake=7;
@@ -654,8 +855,9 @@ function update(dt){
   }
 
   // 체크포인트
-  for(let i=cpIdx+1;i<CHECKPOINTS.length;i++){
-    if(chest.x>CHECKPOINTS[i].x){
+  const activeCps=CHECKPOINTS.slice(0,levelCfg.cps);
+  for(let i=cpIdx+1;i<activeCps.length;i++){
+    if(chest.x>activeCps[i].x){
       cpIdx=i; sChime(); toast('📍 체크포인트! 부장님이 편안해 보인다');
       if(meter<=10) addRescue('team','극한의 눈치',500);
     }
@@ -696,7 +898,7 @@ function update(dt){
       }
       stirPending=null;
       const stage=sleepStage();
-      nextStir=runTime+rnd(18,32)*(stage==='edge'?0.35:stage==='half'?0.55:stage==='light'?0.78:1);
+      nextStir=runTime+rnd(18,32)*diff.stir*(stage==='edge'?0.35:stage==='half'?0.55:stage==='light'?0.78:1);
     }
   }
 
@@ -734,7 +936,8 @@ function update(dt){
       else if(pts>=40){g='C';cap='월요일 아침, 어쩐지 눈치가 보인다.';}
       else if(pts>=22){g='D';cap='사내에 팀 이동설이 돈다.';}
       else {g='F';cap='지방 발령. 조용히 짐을 싸자.';}
-      gradeInfo={g,cap,pts:Math.round(pts),missionOK:missionPassed()};
+      gradeInfo={g,cap,pts:Math.round(pts),missionOK:missionPassed(),level:currentLevel};
+      campaignComplete=currentLevel===LEVELS.length;
       if(scrapeGain) scrapeGain.gain.value=0;
     }
   }
@@ -863,6 +1066,16 @@ function drawLevel(){
       }
       cx.strokeStyle='#5a6488'; cx.beginPath(); cx.moveTo(s.x,s.y-40); cx.lineTo(s.x+s.w,s.y-40); cx.stroke();
       cx.lineWidth=1;
+    } else if(s.tag==='danger'){
+      cx.fillStyle='#6b2c3d'; cx.fillRect(s.x,s.y,s.w,s.h);
+      cx.fillStyle='#ff6b6b'; cx.fillRect(s.x,s.y,s.w,4);
+      cx.fillStyle='rgba(255,214,140,0.35)';
+      for(let x=s.x-10;x<s.x+s.w;x+=24){
+        cx.beginPath(); cx.moveTo(x,s.y+s.h); cx.lineTo(x+10,s.y+s.h); cx.lineTo(x+28,s.y); cx.lineTo(x+18,s.y); cx.closePath(); cx.fill();
+      }
+    } else if(s.tag==='level'){
+      cx.fillStyle='#4b3548'; cx.fillRect(s.x,s.y,s.w,s.h);
+      cx.fillStyle='#c85568'; cx.fillRect(s.x,s.y,s.w,4);
     } else {
       cx.fillStyle='#333a4d'; cx.fillRect(s.x,s.y,s.w,s.h);
       cx.fillStyle='#454d63'; cx.fillRect(s.x,s.y,s.w,4);
@@ -887,7 +1100,7 @@ function drawDecos(){
   cx.fillStyle='#1f2750'; cx.fillRect(5200,G_Y-170,260,170);
   neon(5330,G_Y-185,'24시 해장국','#ffd45e',22);
   // 전봇대(체크포인트)
-  for(const cp of CHECKPOINTS){
+  for(const cp of CHECKPOINTS.slice(0,levelCfg.cps)){
     if(cp.x<400) continue;
     cx.fillStyle='#39415c'; cx.fillRect(cp.x-5,G_Y-240,10,240);
     cx.fillStyle='#2c3350'; cx.fillRect(cp.x-26,G_Y-226,52,8);
@@ -955,7 +1168,7 @@ function drawDecos(){
     cx.fillStyle='rgba(125,255,168,'+(0.06+0.04*Math.sin(titleT*3))+')';
     cx.fillRect(GOAL_X0,G_Y-180,GOAL_X1-GOAL_X0,180);
     cx.fillStyle='#7dffa8'; cx.font='bold 15px sans-serif';
-    cx.fillText('▼ 여기 내려놓기 (그립 F / Shift 해제)',(GOAL_X0+GOAL_X1)/2,G_Y-190);
+    cx.fillText(TOUCH_UI?'▼ 여기 내려놓기 (양쪽 그립 해제)':'▼ 여기 내려놓기 (그립 F / Shift 해제)',(GOAL_X0+GOAL_X1)/2,G_Y-190);
   }
 }
 function capsule(a,b,w,col){
@@ -1059,7 +1272,7 @@ function drawCarrier(c){
   // 리그랩 힌트
   if(c.regrabHint){
     cx.font='bold 13px sans-serif'; cx.fillStyle='#7dffa8'; cx.textAlign='center';
-    cx.fillText(c.role==='front'?'[Shift] 다시 잡기':'[F] 다시 잡기',cxm,y-14);
+    cx.fillText(TOUCH_UI?'[그립] 다시 잡기':c.role==='front'?'[Shift] 다시 잡기':'[F] 다시 잡기',cxm,y-14);
     cx.strokeStyle='rgba(125,255,168,0.6)';
     cx.beginPath(); cx.arc(an.x,an.y,10+3*Math.sin(titleT*6),0,7); cx.stroke();
   }
@@ -1070,7 +1283,7 @@ function drawCarrier(c){
   // 초반 조작 힌트
   if(c.x<860 && state==='play'){
     cx.fillStyle='rgba(223,230,255,0.75)'; cx.font='12px sans-serif';
-    const txt = c.role==='front'?'←→ 이동 · ↑ 점프 · ↓ 숙이기 · Shift 그립':'A D 이동 · W 점프 · S 숙이기 · F 그립';
+    const txt = TOUCH_UI?'◀▶ 이동 · ▲ 점프 · ▼ 숙이기 · 그립':c.role==='front'?'←→ 이동 · ↑ 점프 · ↓ 숙이기 · Shift 그립':'A D 이동 · W 점프 · S 숙이기 · F 그립';
     cx.fillText(txt,cxm,y+h+18);
   }
 }
@@ -1120,13 +1333,13 @@ function drawHUD(){
   const prog=clamp(boss.pts.chest.x/GOAL_CX,0,1);
   cx.fillStyle='#ffd45e'; cx.beginPath(); cx.arc(px0+pw*prog,py0+5,6,0,7); cx.fill();
   cx.fillStyle='#aeb9e6'; cx.font='bold 12px sans-serif'; cx.textAlign='center';
-  cx.fillText('집까지 '+Math.max(0,Math.round((GOAL_CX-boss.pts.chest.x)/10))+'m',px0+pw/2,py0+17);
+  cx.fillText('LEVEL '+currentLevel+'/'+LEVELS.length+' · '+levelCfg.name+' · 집까지 '+Math.max(0,Math.round((GOAL_CX-boss.pts.chest.x)/10))+'m',px0+pw/2,py0+17);
   // 우측 상단 스탯
   cx.textAlign='right'; cx.fillStyle='rgba(223,230,255,0.85)'; cx.font='bold 14px sans-serif';
   const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
-  cx.fillText((mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   소음 '+noiseCnt+'회   기상 '+wakeCnt+'회   클립 '+clipScore, VW-24, 34);
+  cx.fillText('난이도 '+('◆'.repeat(Math.ceil(currentLevel/6)))+('◇'.repeat(5-Math.ceil(currentLevel/6)))+'   '+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   소음 '+noiseCnt+'회   기상 '+wakeCnt+'회   클립 '+clipScore, VW-24, 34);
   cx.fillStyle='rgba(174,185,230,0.6)'; cx.font='12px sans-serif';
-  cx.fillText('R 체크포인트 재시작 · P 일시정지 · M 음소거', VW-24, 54);
+  cx.fillText(TOUCH_UI?'터치 패드 조작 · 상단 메뉴에서 재정비·일시정지': 'R 체크포인트 재시작 · P 일시정지 · M 음소거', VW-24, 54);
   // 그립 상태
   drawGripChip(carriers[0], 24, VH-46);
   drawGripChip(carriers[1], VW-224, VH-46);
@@ -1193,7 +1406,7 @@ function drawGripChip(c,x,y){
   cx.fillStyle=on?'#3ec9a7':'#ff6b6b';
   cx.beginPath(); cx.arc(x+18,y+17,7,0,7); cx.fill();
   cx.fillStyle='#dfe6ff'; cx.font='bold 13px sans-serif'; cx.textAlign='left';
-  const key=c.role==='front'?'Shift':'F';
+  const key=TOUCH_UI?'그립':c.role==='front'?'Shift':'F';
   cx.fillText(c.label+' ['+key+'] '+(on?'잡는 중':'놓음!'),x+34,y+22);
 }
 function drawTitle(){
@@ -1206,23 +1419,23 @@ function drawTitle(){
   cx.strokeStyle='#e2564b'; cx.lineWidth=3.5; roundRect(-56,-24,112,48,8); cx.stroke();
   cx.fillStyle='#e2564b'; cx.font='900 25px sans-serif'; cx.fillText('회식엔딩',0,9); cx.restore();
   cx.fillStyle='#aeb9e6'; cx.font='500 21px sans-serif';
-  cx.fillText('떨어뜨리지 말고, 깨우지 말고, 집까지.',VW/2,236);
-  drawBtn(VW/2-330,300,300,86,'[1]  혼자 연습','왼손=뒷사람(WASD+F) · 오른손=앞사람(방향키+Shift)', keys._h1);
-  drawBtn(VW/2+30,300,300,86,'[2]  둘이서 협동','키보드 반씩 나눠 잡기 · 서로 탓할 준비 필수', keys._h2);
+  cx.fillText('30개 레벨. 떨어뜨리지 말고, 깨우지 말고, 끝까지.',VW/2,236);
+  drawBtn(VW/2-330,300,300,86,TOUCH_UI?'👆 혼자 터치 플레이':'[1]  혼자 연습',TOUCH_UI?'양쪽 엄지로 두 사람을 동시에 조작':'왼손=뒷사람(WASD+F) · 오른손=앞사람(방향키+Shift)', keys._h1);
+  drawBtn(VW/2+30,300,300,86,TOUCH_UI?'👆 2인 터치 협동':'[2]  둘이서 협동',TOUCH_UI?'화면 양쪽을 한 사람씩 맡아 조작':'키보드 반씩 나눠 잡기 · 서로 탓할 준비 필수', keys._h2);
   // 조작표
   cx.fillStyle='rgba(20,25,52,0.9)'; roundRect(VW/2-420,430,840,180,14); cx.fill();
   cx.strokeStyle='#39415c'; cx.stroke();
   cx.textAlign='left'; cx.font='bold 17px sans-serif';
   cx.fillStyle='#4f8ef7'; cx.fillText('🟦 뒷사람',VW/2-380,470);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText('A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
+  cx.fillText(TOUCH_UI?'왼쪽 파란 패드     ◀▶ 이동     ▲ 점프     ▼ 숙이기     그립 잡기·놓기':'A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
   cx.fillStyle='#3ec9a7'; cx.font='bold 17px sans-serif'; cx.fillText('🟩 앞사람',VW/2-380,540);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText('← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 그립 잡기·놓기',VW/2-380,570);
+  cx.fillText(TOUCH_UI?'오른쪽 초록 패드   ◀▶ 이동     ▲ 점프     ▼ 숙이기     그립 잡기·놓기':'← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 그립 잡기·놓기',VW/2-380,570);
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.2 — 행동 기반 과실 판정 · 구조 보너스 · 눈뜸 · 택시 · 오늘의 미션',VW/2,646);
+  cx.fillText('v0.5 — PC 키보드와 모바일 멀티터치를 지원하는 30레벨 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
@@ -1244,7 +1457,7 @@ function drawWake(dt){
   if(wakeAnimT<0.5) return;
   cx.textAlign='center';
   cx.font='900 54px sans-serif'; cx.fillStyle='#ff6b6b';
-  cx.fillText('부장님이 깨어났다',VW/2,150);
+  cx.fillText('LEVEL '+currentLevel+' 실패 · 부장님이 깨어났다',VW/2,150);
   cx.font='600 24px sans-serif'; cx.fillStyle='#ffd9a0';
   cx.fillText('"'+lastWakeLine+'"',VW/2,196);
   cx.font='bold 21px sans-serif'; cx.fillStyle='#dfe6ff';
@@ -1269,7 +1482,7 @@ function drawWake(dt){
   cx.fillStyle='#8b96c4'; cx.font='12px sans-serif';
   cx.fillText('※ 본 판정에 대한 이의신청은 받지 않습니다.',VW/2,by0+140);
   cx.font='bold 19px sans-serif'; cx.fillStyle='#ffe9b8';
-  cx.fillText('R  체크포인트에서 계속     ·     T  처음부터',VW/2,by0+186);
+  cx.fillText(TOUCH_UI?'상단 메뉴에서 계속 또는 LEVEL '+currentLevel+' 다시 시작':'R  체크포인트에서 계속     ·     T  LEVEL '+currentLevel+' 다시 시작',VW/2,by0+186);
 }
 function reasonSummary(side){
   const es=Object.entries(faults[side].counts).sort((a,b)=>b[1]-a[1]).slice(0,3);
@@ -1279,9 +1492,9 @@ function drawClear(dt){
   clearT+=dt;
   cx.fillStyle='rgba(8,11,28,'+clamp(clearT*0.8,0,0.78)+')'; cx.fillRect(0,0,VW,VH);
   cx.textAlign='center';
-  if(clearT>0.3&&clearT<2.7){ cx.font='600 22px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText('띠링—',VW/2,150); }
-  if(clearT>1.0&&clearT<2.7){ cx.font='600 20px sans-serif'; cx.fillStyle='#dfe6ff'; cx.fillText('사모님: "…또 회식이야?"',VW/2,192); }
-  if(clearT>1.8&&clearT<2.7){ cx.font='600 20px sans-serif'; cx.fillStyle='#aeb9e6'; cx.fillText('부장님: "…나 안 취했어…"',VW/2,230); }
+  if(clearT>0.3&&clearT<2.7){ cx.font='900 32px sans-serif'; cx.fillStyle='#7dffa8'; cx.fillText('LEVEL '+currentLevel+' CLEAR',VW/2,150); }
+  if(clearT>1.0&&clearT<2.7){ cx.font='600 22px sans-serif'; cx.fillStyle='#dfe6ff'; cx.fillText(levelCfg.name+' 통과',VW/2,192); }
+  if(clearT>1.8&&clearT<2.7){ cx.font='600 19px sans-serif'; cx.fillStyle='#aeb9e6'; cx.fillText(campaignComplete?LEVELS.length+'개 레벨을 전부 살아남았습니다.':'다음 레벨은 더 어렵습니다.',VW/2,230); }
   if(clearT>2.7&&gradeInfo){
     if(!gradeInfo.stamped){ gradeInfo.stamped=true; sStamp(); setTimeout(sFanfa,300); }
     const pct=faultPercent();
@@ -1291,7 +1504,7 @@ function drawClear(dt){
     const gc=gradeInfo.g==='S'?'#ffd45e':gradeInfo.g==='F'?'#ff6b6b':'#e2564b';
     cx.fillStyle='rgba(12,16,38,0.96)'; roundRect(100,56,1080,610,20); cx.fill();
     cx.strokeStyle='#5a6488'; cx.lineWidth=2; cx.stroke(); cx.lineWidth=1;
-    cx.font='900 28px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText('회식 귀가 보고서',VW/2,96);
+    cx.font='900 28px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText(campaignComplete?'🏁 '+LEVELS.length+' LEVEL ALL CLEAR':'LEVEL '+currentLevel+' 귀가 보고서 · '+levelCfg.name,VW/2,96);
     // 등급
     cx.save(); cx.translate(205,194); cx.rotate(-0.12); cx.strokeStyle=gc; cx.lineWidth=6;
     cx.beginPath(); cx.arc(0,0,65,0,7); cx.stroke(); cx.fillStyle=gc; cx.font='900 82px sans-serif'; cx.fillText(gradeInfo.g,0,29); cx.restore();
@@ -1322,19 +1535,41 @@ function drawClear(dt){
     cx.fillStyle=gradeInfo.missionOK?'#7dffa8':'#ff8d8d'; cx.font='bold 16px sans-serif';
     cx.fillText((gradeInfo.missionOK?'✓ 미션 성공  ':'✕ 미션 실패  ')+mission.title+' — '+mission.desc,182,535);
     cx.textAlign='center'; cx.fillStyle='#ffd9a0'; cx.font='bold 19px sans-serif';
-    cx.fillText('다시 하면 더 잘할 수 있을 것 같습니까?',VW/2,605);
-    cx.fillStyle='#ffe9b8'; cx.fillText('[T] 당연하지      [Esc] 타이틀로',VW/2,638);
+    cx.fillText(campaignComplete?'월요일 출근 생존 확정. 전설이 되셨습니다.':'다음 관문: LEVEL '+(currentLevel+1)+' · '+LEVELS[currentLevel].name,VW/2,605);
+    cx.fillStyle='#ffe9b8';
+    cx.fillText(TOUCH_UI?'상단 메뉴에서 다음 단계·다시하기·타이틀 선택':campaignComplete?'[T] LEVEL 1부터 다시      [Esc] 타이틀로':'[Enter] 다음 레벨      [T] 현재 레벨 다시      [Esc] 타이틀로',VW/2,638);
   }
 }
 function drawPause(){
   cx.fillStyle='rgba(8,11,28,0.7)'; cx.fillRect(0,0,VW,VH);
   cx.textAlign='center'; cx.font='900 44px sans-serif'; cx.fillStyle='#ffe9b8';
-  cx.fillText('일시정지',VW/2,330);
+  cx.fillText('LEVEL '+currentLevel+' · '+levelCfg.name,VW/2,330);
   cx.font='17px sans-serif'; cx.fillStyle='#aeb9e6';
-  cx.fillText('P 계속 · R 체크포인트 재시작 · Esc 타이틀',VW/2,380);
+  cx.fillText(TOUCH_UI?'상단 메뉴에서 계속·재정비·타이틀 선택':'P 계속 · R 체크포인트 재시작 · Esc 타이틀',VW/2,380);
 }
 
 /* ---------------- 화면 전환 입력 ---------------- */
+let touchMenuSignature='';
+function syncTouchMenu(){
+  if(!TOUCH_UI) return;
+  const controls=document.getElementById('touchControls'), menu=document.getElementById('touchMenu');
+  const sig=state+'|'+campaignComplete+'|'+muted; if(sig===touchMenuSignature) return;
+  touchMenuSignature=sig;
+  controls.classList.toggle('can-move',state==='play');
+  let items=[];
+  if(state==='play') items=[['Ⅱ 일시정지','KeyP'],['↻ 재정비','KeyR'],[muted?'🔊 소리':'🔇 음소거','KeyM']];
+  else if(state==='pause') items=[['▶ 계속','KeyP'],['↻ 재정비','KeyR'],['⌂ 타이틀','Escape']];
+  else if(state==='wake') items=[['▶ 계속','KeyR'],['↻ 다시하기','KeyT'],['⌂ 타이틀','Escape']];
+  else if(state==='clear'&&!campaignComplete) items=[['다음 단계','Enter'],['↻ 다시하기','KeyT'],['⌂ 타이틀','Escape']];
+  else if(state==='clear') items=[['LEVEL 1부터','KeyT'],['⌂ 타이틀','Escape']];
+  const menuBtns=[...menu.querySelectorAll('.touchBtn')];
+  menuBtns.forEach((btn,i)=>{
+    const item=items[i]; btn.hidden=!item;
+    if(item){ btn.textContent=item[0]; btn.dataset.code=item[1]; btn.setAttribute('aria-label',item[0]); }
+    else { btn.textContent=''; delete btn.dataset.code; }
+  });
+  menu.classList.toggle('visible',items.length>0);
+}
 function metaInput(){
   if(state==='title'){
     let m=null;
@@ -1356,9 +1591,10 @@ function metaInput(){
     if(pressed['Escape']) state='title';
   } else if(state==='wake'){
     if(pressed['KeyR']){ respawn(); state='play'; }
-    if(pressed['KeyT']) startGame(mode);
+    if(pressed['KeyT']) startLevel(currentLevel);
   } else if(state==='clear'){
-    if(pressed['KeyT']) startGame(mode);
+    if(pressed['Enter']&&currentLevel<LEVELS.length) startLevel(currentLevel+1);
+    if(pressed['KeyT']) campaignComplete?startGame(mode):startLevel(currentLevel);
     if(pressed['Escape']) state='title';
   }
   if(pressed['KeyM']){ muted=!muted; if(master) master.gain.value=muted?0:0.5; }
@@ -1395,6 +1631,7 @@ function frame(t){
     clickPt=null;
     acc-=FDT; n++;
   }
+  syncTouchMenu();
   draw(rdt);
 }
 requestAnimationFrame(frame);
