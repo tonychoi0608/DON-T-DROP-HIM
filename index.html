@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.5.1</title>
+<title>부장님이 잠드셨다 v0.6.0</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -85,7 +85,7 @@
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 모바일 멀티터치 수정 30레벨 캠페인 v0.5.1
+   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.0
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -248,7 +248,8 @@ const sJump   = ()=>{ tone(240,420,0.1,'sine',0.06); };
 const sFanfa  = ()=>{ [523,659,784,1047].forEach((f,i)=>tone(f,f,0.22,'triangle',0.14,i*0.13)); };
 
 /* ---------------- 월드 ---------------- */
-const G_Y = 580, WORLD = 7200, GOAL_X0 = 6600, GOAL_X1 = 7040, GOAL_CX = 6820;
+const G_Y = 580;
+let WORLD = 4600, GOAL_X0 = 4020, GOAL_X1 = 4460, GOAL_CX = 4240;
 const GRAV = 2000, VG = 1900;
 const FDT = 1/60, SUB = 3, SDT = FDT/SUB, ITER = 6;
 
@@ -285,86 +286,198 @@ const LEVELS = [
   {name:'전설의 귀가', desc:'30단계 최종전. 부장님을 집까지 배달하세요.', dmg:3.40, drain:3.24, par:108, grip:50, slip:0.025,stir:0.20, eye:92, cat:34, passive:0.30, start:60, cps:1}
 ];
 
-// 각 레벨에서 새로 추가되며, 상위 레벨에는 누적되는 장애물입니다.
-const LEVEL_HAZARDS = [
-  [],
-  [{x:520,y:G_Y-22,w:120,h:22},{x:2350,y:G_Y-26,w:130,h:26},{x:6020,y:G_Y-28,w:110,h:28}],
-  [{x:1835,y:G_Y-186,w:170,h:66,tag:'danger'},{x:5350,y:G_Y-114,w:150,h:66,tag:'danger'}],
-  [{x:2940,y:G_Y-30,w:70,h:30},{x:3010,y:G_Y-54,w:70,h:54},{x:3400,y:G_Y-64,w:90,h:64}],
-  [{x:2520,y:G_Y-114,w:160,h:66,tag:'danger'},{x:5920,y:G_Y-114,w:150,h:66,tag:'danger'}],
-  [{x:1085,y:G_Y-32,w:55,h:32},{x:2225,y:G_Y-46,w:65,h:46},{x:5640,y:G_Y-58,w:80,h:58}],
-  [{x:4100,y:G_Y-216,w:150,h:48,tag:'danger'},{x:4480,y:G_Y-216,w:150,h:48,tag:'danger'}],
-  [{x:3150,y:G_Y-42,w:70,h:42},{x:3220,y:G_Y-68,w:70,h:68},{x:6300,y:G_Y-70,w:80,h:70}],
-  [{x:6200,y:G_Y-136,w:150,h:66,tag:'danger'},{x:3510,y:G_Y-114,w:120,h:66,tag:'danger'}],
-  [{x:6380,y:G_Y-26,w:55,h:26},{x:6435,y:G_Y-52,w:55,h:52},{x:6490,y:G_Y-78,w:70,h:78},{x:6410,y:G_Y-192,w:150,h:66,tag:'danger'}],
-  [{x:710,y:G_Y-36,w:48,h:36}],
-  [{x:1340,y:G_Y-142,w:150,h:50,tag:'danger'}],
-  [{x:2780,y:G_Y-40,w:80,h:40}],
-  [{x:2260,y:G_Y-128,w:140,h:40,tag:'danger'}],
-  [{x:3440,y:G_Y-52,w:76,h:52}],
-  [{x:4820,y:G_Y-160,w:130,h:44,tag:'danger'}],
-  [{x:5500,y:G_Y-36,w:96,h:36}],
-  [{x:600,y:G_Y-140,w:140,h:46,tag:'danger'}],
-  [{x:1400,y:G_Y-52,w:72,h:52}],
-  [{x:3320,y:G_Y-148,w:130,h:42,tag:'danger'}],
-  [{x:5010,y:G_Y-50,w:82,h:50}],
-  [{x:2700,y:G_Y-146,w:130,h:42,tag:'danger'}],
-  [{x:760,y:G_Y-44,w:58,h:44}],
-  [{x:3510,y:G_Y-156,w:120,h:42,tag:'danger'}],
-  [{x:5300,y:G_Y-56,w:84,h:56}],
-  [{x:970,y:G_Y-160,w:110,h:40,tag:'danger'}],
-  [{x:2400,y:G_Y-48,w:68,h:48}],
-  [{x:6070,y:G_Y-160,w:105,h:42,tag:'danger'}],
-  [{x:4300,y:G_Y-60,w:82,h:60}],
-  [{x:5880,y:G_Y-164,w:110,h:42,tag:'danger'}]
+const MAP_THEMES = [
+  {name:'회식 골목',top:'#0b1026',bottom:'#1c2447',far:'#131a36',near:'#171f40',accent:'#ff5d8f',sign:'회식 골목'},
+  {name:'새벽 시장',top:'#10152d',bottom:'#27314b',far:'#1b2338',near:'#252f43',accent:'#ffd45e',sign:'새벽 시장'},
+  {name:'공사장 우회',top:'#111624',bottom:'#303642',far:'#202633',near:'#2c3440',accent:'#ff8a5b',sign:'공사 구간'},
+  {name:'지하도',top:'#081720',bottom:'#173642',far:'#102832',near:'#17343e',accent:'#5ce1e6',sign:'지하도'},
+  {name:'강남대로',top:'#100d2b',bottom:'#302451',far:'#1d1740',near:'#282052',accent:'#a78bfa',sign:'강남대로'},
+  {name:'아파트 언덕',top:'#17101f',bottom:'#463247',far:'#2b2033',near:'#3a2b3d',accent:'#ffcf8a',sign:'명진마을'}
 ];
 
+function mapRng(seed){
+  let n=seed>>>0;
+  return ()=>{ n=(Math.imul(n,1664525)+1013904223)>>>0; return n/4294967296; };
+}
+/* ---------------- 30개 레벨 고유 맵 레시피 ----------------
+   L:길이  g:장애물 그룹 수  lay:배치 곡선  th:테마  kinds:장애물 어휘
+   cat/tr/tx:고양이·쓰레기·택시 위치(맵 비율)  sil:정숙 구간  cp:체크포인트  hz:장애물 강도 */
+const MAP_RECIPES=[
+ {L:4200,g:9, lay:'even',  th:0,kinds:[0,7],        cat:.30,tr:.70,tx:.55,sil:[.44,.78],cp:[.34,.68],hz:.75},
+ {L:4350,g:10,lay:'rhythm',th:0,kinds:[3,10],       cat:.24,tr:.66,tx:.52,sil:[.40,.80],cp:[.32,.66],hz:.80},
+ {L:4450,g:10,lay:'even',  th:1,kinds:[1,4],        cat:.36,tr:.74,tx:.50,sil:[.48,.82],cp:[.36,.70],hz:.80},
+ {L:4550,g:11,lay:'waves', th:0,kinds:[0,5,12],     cat:.52,tr:.28,tx:.58,sil:[.42,.74],cp:[.30,.64],hz:.85},
+ {L:4700,g:12,lay:'mid',   th:2,kinds:[2,12,4],     cat:.22,tr:.78,tx:.48,sil:[.38,.84],cp:[.35,.69],hz:.90},
+ {L:4800,g:12,lay:'back',  th:4,kinds:[9,3],        cat:.60,tr:.30,tx:.42,sil:[.50,.80],cp:[.33,.70],hz:.90},
+ {L:4900,g:13,lay:'breath',th:1,kinds:[6,1],        cat:.34,tr:.62,tx:.56,sil:[.44,.76],cp:[.30,.72],hz:.95},
+ {L:4950,g:13,lay:'front', th:3,kinds:[5,9,10],     cat:.70,tr:.40,tx:.54,sil:[.36,.82],cp:[.36,.66],hz:.95},
+ {L:5150,g:14,lay:'finale',th:4,kinds:[6,11,2],     cat:.26,tr:.58,tx:.50,sil:[.46,.72],cp:[.34,.68],hz:1.00},
+ {L:5250,g:14,lay:'waves', th:5,kinds:[8,0,4],      cat:.48,tr:.74,tx:.57,sil:[.40,.78],cp:[.31,.67],hz:1.00},
+ {L:5400,g:15,lay:'even',  th:4,kinds:[9,12,6],     cat:.32,tr:.68,tx:.44,sil:[.48,.80],cp:[.35,.70],hz:1.02},
+ {L:5450,g:15,lay:'rhythm',th:0,kinds:[1,7],        cat:.58,tr:.24,tx:.53,sil:[.38,.76],cp:[.30,.65],hz:1.05},
+ {L:5600,g:16,lay:'waves', th:2,kinds:[8,5,2],      cat:.20,tr:.64,tx:.56,sil:[.44,.84],cp:[.36,.71],hz:1.05},
+ {L:5700,g:16,lay:'rhythm',th:1,kinds:[10,3,12],    cat:.42,tr:.76,tx:.48,sil:[.50,.78],cp:[.32,.68],hz:1.08},
+ {L:5800,g:16,lay:'mid',   th:3,kinds:[11,6],       cat:.66,tr:.34,tx:.55,sil:[.42,.72],cp:[.34,.66],hz:1.10},
+ {L:5950,g:17,lay:'even',  th:2,kinds:[2,13,9],     cat:.28,tr:.70,tx:.50,sil:[.46,.82],cp:[.37,.69],hz:1.12},
+ {L:6050,g:17,lay:'breath',th:0,kinds:[5,4,10],     cat:.50,tr:.30,tx:.57,sil:[.36,.74],cp:[.30,.72],hz:1.12},
+ {L:6150,g:18,lay:'front', th:3,kinds:[7,12,1],     cat:.38,tr:.62,tx:.46,sil:[.48,.80],cp:[.33,.64],hz:1.15},
+ {L:6300,g:18,lay:'waves', th:1,kinds:[7,5,8],      cat:.24,tr:.56,tx:.54,sil:[.40,.78],cp:[.35,.70],hz:1.15},
+ {L:6500,g:19,lay:'finale',th:4,kinds:[6,9,11],     cat:.62,tr:.36,tx:.52,sil:[.44,.76],cp:[.31,.66],hz:1.20},
+ {L:6800,g:19,lay:'back',  th:4,kinds:[0,8,10],     cat:.30,tr:.72,tx:.49,sil:[.50,.82],cp:[.36,.68],hz:1.20},
+ {L:7000,g:20,lay:'rhythm',th:3,kinds:[1,8,11],     cat:.46,tr:.26,tx:.55,sil:[.38,.72],cp:[.32,.70],hz:1.25},
+ {L:7150,g:20,lay:'mid',   th:1,kinds:[9,13,6],     cat:.68,tr:.44,tx:.51,sil:[.46,.78],cp:[.34,.67],hz:1.25},
+ {L:7350,g:21,lay:'waves', th:0,kinds:[3,11,5],     cat:.54,tr:.78,tx:.47,sil:[.42,.84],cp:[.30,.71],hz:1.28},
+ {L:7500,g:21,lay:'breath',th:5,kinds:[12,2,8],     cat:.22,tr:.60,tx:.56,sil:[.48,.74],cp:[.35,.69],hz:1.30},
+ {L:7700,g:22,lay:'front', th:4,kinds:[10,6,7],     cat:.40,tr:.68,tx:.45,sil:[.36,.80],cp:[.33,.65],hz:1.30},
+ {L:7950,g:22,lay:'finale',th:2,kinds:[8,9,1],      cat:.64,tr:.32,tx:.53,sil:[.44,.78],cp:[.36,.70],hz:1.35},
+ {L:8200,g:23,lay:'rhythm',th:3,kinds:[11,13,3,12], cat:.26,tr:.74,tx:.50,sil:[.50,.76],cp:[.31,.68],hz:1.35},
+ {L:8500,g:23,lay:'even',  th:4,kinds:[6,1,9,8],    cat:.48,tr:.58,tx:.55,sil:[.40,.82],cp:[.34,.66],hz:1.40},
+ {L:9000,g:24,lay:'back',  th:5,kinds:[8,11,9,6,10],cat:.32,tr:.70,tx:.48,sil:[.46,.80],cp:[.35,.69],hz:1.45}
+];
+/* 배치 곡선: 맵 진행도 t(0~1)에서의 장애물 밀도 가중치 */
+const LAYOUT_W={
+  even:  t=>1,
+  front: t=>1.7-1.3*t,
+  back:  t=>0.35+1.4*t,
+  mid:   t=>Math.max(0.25,1.35-Math.abs(t-0.5)*2.4),
+  waves: (t,k)=>0.22+1.5*Math.pow(Math.sin(t*Math.PI*k),2),
+  breath:t=>0.3+Math.abs(t-0.5)*1.9,
+  finale:t=>t<0.55?0.3:1.9,
+  rhythm:t=>1
+};
+function makeMapSpec(level){
+  const R=MAP_RECIPES[clamp(level,1,MAP_RECIPES.length)-1];
+  const length=R.L, goalCenter=length-360;
+  const px=f=>Math.round(f*length/10)*10;
+  const taxiX0=Math.min(px(R.tx),length-1920);
+  const cp2=px(R.cp[0]), cp3=px(R.cp[1]);
+  const catX=clamp(px(R.cat),520,length-980), trashX=clamp(px(R.tr),700,length-900);
+  return {
+    level,length,goalCenter,goalX0:goalCenter-220,goalX1:goalCenter+220,
+    theme:MAP_THEMES[R.th],recipe:R,
+    seed:(Math.imul(level,2246822519)^0x9e3779b9)>>>0,
+    hazardGroups:R.g,
+    checkpoints:[{x:360},{x:cp2},{x:cp3}],
+    catX,trashX,taxiX0,taxiX1:taxiX0+360,taxiSkip:800,
+    silentXs:[px(R.sil[0]),px(R.sil[1])],
+    bottleXs:[trashX-190,trashX-145,trashX-105,cp2+100,cp3-130],
+    landmarkX:Math.round(length*0.73),signature:'',obstacleCount:0
+  };
+}
+
+let activeMap=null;
+let CHECKPOINTS=[];
 const solids = [];
 function box(x,y,w,h,tag){ solids.push({x,y,w,h,tag:tag||''}); return solids[solids.length-1]; }
+function addObstacleGroup(x,kind,rng,level,hz){
+  const H=v=>Math.min(84,Math.round(v));
+  const h=H((16+rng()*14+level*0.8)*hz);
+  const clear=Math.max(56,Math.round(84-level*0.9)); // 천장 아래 통과 여유(레벨↑=좁아짐)
+  if(kind===0){        // 오르막 3계단
+    for(let i=0;i<3;i++){ const hh=H(h+i*7); box(x+i*34,G_Y-hh,30,hh,'level'); }
+  } else if(kind===1){ // 낮은 천장 3연속
+    const hh=46+Math.floor(rng()*16), y=G_Y-clear-hh;
+    for(let i=0;i<3;i++) box(x+i*38,y+(i%2)*8,34,hh,'danger');
+  } else if(kind===2){ // 상승 계단
+    for(let i=0;i<3;i++){ const hh=H(18*(i+1)*hz+6); box(x+i*34,G_Y-hh,32,hh,'stair'); }
+  } else if(kind===3){ // 문턱-기둥-문턱
+    box(x,G_Y-h,30,h,'level'); box(x+38,G_Y-H(h+18),30,H(h+18),'level'); box(x+76,G_Y-h,30,h,'level');
+  } else if(kind===4){ // 구름다리
+    const y=G_Y-82-Math.floor(rng()*20);
+    for(let i=0;i<3;i++) box(x+i*38,y,36,20,'bridge');
+  } else if(kind===5){ // 울타리(중앙 위험)
+    for(let i=0;i<3;i++){ const hh=H(22+rng()*(24+level)*hz*0.8); box(x+i*36,G_Y-hh,32,hh,i===1?'danger':'level'); }
+  } else if(kind===6){ // 굵은 외벽 하나
+    const hh=H(h*1.3+14); box(x+20,G_Y-hh,56,hh,'level');
+  } else if(kind===7){ // 긴 좌판(양끝 디딤돌로 넘기)
+    const hb=H(40+rng()*16);
+    box(x,G_Y-hb,150,18,'bridge'); box(x+16,G_Y-14,22,14,'stair'); box(x+112,G_Y-14,22,14,'stair');
+  } else if(kind===8){ // 터널(바닥 턱 + 낮은 천장)
+    box(x+16,G_Y-16,100,16,'stair');
+    const hh=50; box(x,G_Y-16-(clear+8)-hh,132,hh,'danger');
+  } else if(kind===9){ // 피라미드(정점 위험)
+    const s=[0.5,0.8,1.15,0.8,0.5];
+    for(let i=0;i<5;i++){ const hh=H(h*s[i]+8); box(x+i*27,G_Y-hh,24,hh,i===2?'danger':'level'); }
+  } else if(kind===10){ // 지그재그 단차
+    for(let i=0;i<4;i++){ const hh=H(i%2?h*1.05+10:h*0.5+6); box(x+i*33,G_Y-hh,29,hh,'level'); }
+  } else if(kind===11){ // 이중 천장(높이 엇갈림)
+    const hh=48+Math.floor(rng()*10);
+    box(x,G_Y-(clear+10)-hh,60,hh,'danger');
+    box(x+96,G_Y-Math.max(50,clear-6)-hh,60,hh,'danger');
+  } else if(kind===12){ // 오르는 징검 발판
+    for(let i=0;i<3;i++) box(x+i*46,G_Y-38-i*15,40,15,'bridge');
+  } else {             // 내리막 3계단
+    for(let i=0;i<3;i++){ const hh=H(h+(2-i)*9+6); box(x+i*34,G_Y-hh,30,hh,'level'); }
+  }
+}
 function buildLevelWorld(level){
-  solids.length=0;
-  box(-300, G_Y, WORLD+600, 240, 'ground');
-  box(820,  G_Y-22, 260, 22, 'curb');
-  box(1150, G_Y-114, 170, 66, 'banner');
-  for(let i=0;i<3;i++) box(1560+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
-  box(1698, G_Y-72, 462, 72, 'plate');
-  for(let i=0;i<2;i++) box(2160+i*46, G_Y-(48-24*i), 46, 48-24*i, 'stair');
-  box(3080, G_Y-22, 120, 22, 'curb');
-  box(3260, G_Y-40, 140, 40, 'curb');
-  for(let i=0;i<5;i++) box(3650+i*46, G_Y-24*(i+1), 46, 24*(i+1), 'stair');
-  box(3880, G_Y-120, 900, 24, 'bridge');
-  for(let i=0;i<4;i++) box(4780+i*46, G_Y-(96-24*i), 46, 96-24*i, 'stair');
-  box(4060, 350, 90, 62, 'lamp');
-  box(4420, 350, 90, 62, 'lamp');
-  box(5750, G_Y-114, 170, 66, 'banner');
-  box(6150, G_Y-22, 200, 22, 'curb');
-  for(let i=1;i<level;i++) for(const h of LEVEL_HAZARDS[i]) box(h.x,h.y,h.w,h.h,h.tag||'level');
+  activeMap=makeMapSpec(level);
+  const R=activeMap.recipe;
+  WORLD=activeMap.length; GOAL_CX=activeMap.goalCenter; GOAL_X0=activeMap.goalX0; GOAL_X1=activeMap.goalX1;
+  CHECKPOINTS=activeMap.checkpoints;
+  solids.length=0; box(-300,G_Y,WORLD+600,240,'ground');
+  const reserved=[
+    [0,620],[GOAL_X0-400,WORLD],
+    ...CHECKPOINTS.slice(1).map(cp=>[cp.x-120,cp.x+170]),
+    [activeMap.taxiX0-100,activeMap.taxiX1+100],
+    [activeMap.taxiX0+activeMap.taxiSkip-90,activeMap.taxiX1+activeMap.taxiSkip+90]
+  ];
+  const blocked=x=>reserved.some(z=>x+150>z[0]&&x<z[1]);
+  const x0=640, x1=GOAL_X0-420;
+  const slots=[]; for(let x=x0;x<x1;x+=40) if(!blocked(x)) slots.push(x);
+  const freePx=slots.length*40;
+  const rng=mapRng(activeMap.seed);
+  const wfn=LAYOUT_W[R.lay]||LAYOUT_W.even;
+  const waveK=3+level%3;
+  /* 밀도는 실제 남은 공간에서 계산: 목표 간격이 레벨에 따라 411px→150px로 줄어든다 */
+  const sp=Math.max(150,420-level*9)*(R.lay==='rhythm'?0.8:1);
+  const groups=clamp(Math.round(freePx/sp),4,R.g+4);
+  activeMap.hazardGroups=groups;
+  const minGap=Math.max(120,sp*0.66);
+  const chosen=[];
+  for(let n=0;n<groups;n++){
+    let total=0;
+    const w=slots.map(x=>{
+      if(chosen.some(c=>Math.abs(c-x)<minGap)) return 0;
+      const t=(x-x0)/(x1-x0);
+      const v=Math.max(0,wfn(t,waveK)); total+=v; return v;
+    });
+    if(total<=0) break;
+    let r=rng()*total, pick=-1;
+    for(let i=0;i<slots.length;i++){ r-=w[i]; if(r<=0&&w[i]>0){ pick=slots[i]; break; } }
+    if(pick<0){ for(let i=slots.length-1;i>=0;i--) if(w[i]>0){ pick=slots[i]; break; } }
+    if(pick<0) break;
+    chosen.push(pick);
+  }
+  chosen.sort((a,b)=>a-b);
+  for(let i=0;i<chosen.length;i++) addObstacleGroup(chosen[i],R.kinds[i%R.kinds.length],rng,level,R.hz);
+  activeMap.obstacleCount=solids.length-1;
+  activeMap.signature=solids.slice(1).map(s=>[Math.round(s.x),Math.round(s.y),s.w,s.h,s.tag].join(':')).join('|');
 }
-buildLevelWorld(1);
 
-const CHECKPOINTS = [{x:360},{x:3500},{x:5150}];
-const catZone = {x0:2700, x1:2980, catX:2860, spooked:false, runX:0};
+buildLevelWorld(1);
+const catZone = {x0:activeMap.catX-140,x1:activeMap.catX+140,catX:activeMap.catX,spooked:false,runX:0};
 let bottles = [];
-function resetBottles(){
-  const extra=[1040,2920,3190,3480,5680,6110,6360].slice(0,Math.max(0,currentLevel-3));
-  bottles=[2470,2515,2552,5470,5510,...extra].map(x=>({x,k:false,vx:0,rot:0,done:false}));
-}
+function resetBottles(){ bottles=activeMap.bottleXs.map(x=>({x,k:false,vx:0,rot:0,done:false})); }
 
 /* 배경 프리컴퓨트 */
 const starsA=[]; for(let i=0;i<90;i++) starsA.push({x:Math.random()*VW,y:Math.random()*380,r:Math.random()*1.4+0.4,tw:Math.random()*6});
-function mkBuildings(par, hMin,hMax, col){
-  const arr=[]; let x=-200;
+function mkBuildings(par,hMin,hMax,col,seed){
+  const rng=mapRng(seed), arr=[]; let x=-200;
   while(x < WORLD*par+VW+400){
-    const w=rnd(90,220), h=rnd(hMin,hMax); const wins=[];
+    const w=90+rng()*130, h=hMin+rng()*(hMax-hMin), wins=[];
     for(let wy=0; wy<h-30; wy+=34) for(let wx=10; wx<w-18; wx+=26)
-      if(Math.random()<0.32) wins.push({x:wx,y:wy});
-    arr.push({x,w,h,wins,col}); x+=w+rnd(6,60);
+      if(rng()<0.32) wins.push({x:wx,y:wy});
+    arr.push({x,w,h,wins,col}); x+=w+6+rng()*54;
   }
   return arr;
 }
-const bldFar  = mkBuildings(0.25, 120,300, '#131a36');
-const bldNear = mkBuildings(0.55, 180,380, '#171f40');
-const lampXs = [600,1400,2250,2950,3550,5100,5900,6500];
+let bldFar=[], bldNear=[];
+function rebuildBackdrop(){
+  bldFar=mkBuildings(0.25,120,300,activeMap.theme.far,activeMap.seed^0x13579);
+  bldNear=mkBuildings(0.55,180,380,activeMap.theme.near,activeMap.seed^0x24680);
+}
+rebuildBackdrop();
 
 /* ---------------- Verlet 물리 ---------------- */
 function P(x,y,m,r){ return {x,y,px:x,py:y,m:m||1,r:r||5.5,hitCd:0,onGround:false}; }
@@ -604,8 +717,8 @@ let soloHoldBest={front:0,back:0};
 let eyeOpen={active:false,t:0,next:99,penaltyCd:0,moved:false};
 let silentZone={active:false,t:0,index:-1,hitCd:0,pulseDone:false,frontMsg:'',backMsg:''}, silentVisited=[false,false];
 let headHitCnt=0, gripDropCnt=0, manualResetCnt=0, mission=null;
-let trash={x:2635,spilled:false};
-let taxi={x0:4920,x1:5280,active:true,entered:false,t:0,success:false,failed:false};
+let trash={x:activeMap.trashX,spilled:false};
+let taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false};
 const REASON_KO = {release:'손을 스스로 놓아버림', slip:'무리하게 당겨 손이 미끄러짐',
   impact:'낙하 충격 유발', drag:'부장님을 바닥에 끌고 다님', cat:'고양이를 놀라게 함',
   bottle:'소주병을 걷어참', abandon:'부장님을 길에 방치함', mic:'고함으로 숙면을 방해함'};
@@ -741,14 +854,14 @@ function startGame(m){
 }
 function startLevel(level){
   currentLevel=clamp(level,1,LEVELS.length); levelCfg=LEVELS[currentLevel-1];
+  buildLevelWorld(currentLevel); rebuildBackdrop();
   const assist=mode==='solo'?0.72:1;
   diff={
     dmg:levelCfg.dmg*assist, drain:levelCfg.drain*assist,
-    par:Math.round(levelCfg.par*(mode==='solo'?1.27:1)),
+    par:Math.round((70+WORLD/38)*(mode==='solo'?1.27:1)),
     grip:levelCfg.grip, slip:levelCfg.slip, stir:levelCfg.stir,
     eye:levelCfg.eye, cat:levelCfg.cat, passive:levelCfg.passive*assist, start:levelCfg.start
   };
-  buildLevelWorld(currentLevel);
   runTime=0; noiseCnt=0; wakeCnt=0; cpIdx=0;
   faults={front:{total:0,reasons:{},counts:{}}, back:{total:0,reasons:{},counts:{}}};
   actionHistory={front:[],back:[]}; lastGripChange={front:-99,back:-99};
@@ -760,13 +873,17 @@ function startLevel(level){
   eyeOpen={active:false,t:0,next:rnd(12,18),penaltyCd:0,moved:false};
   silentZone={active:false,t:0,index:-1,hitCd:0,pulseDone:false,frontMsg:'',backMsg:''}; silentVisited=[false,false];
   headHitCnt=0; gripDropCnt=0; manualResetCnt=0;
-  trash={x:2635,spilled:false}; taxi={x0:4920,x1:5280,active:true,entered:false,t:0,success:false,failed:false};
+  trash={x:activeMap.trashX,spilled:false};
+  taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false};
   mission=MISSIONS[(Math.random()*MISSIONS.length)|0];
-  resetBottles(); catZone.spooked=false;
+  resetBottles();
+  catZone.x0=activeMap.catX-140; catZone.x1=activeMap.catX+140; catZone.catX=activeMap.catX;
+  catZone.spooked=false; catZone.runX=0;
   meter=diff.start; clearT=-1; gradeInfo=null; toasts=[]; particles=[];
   respawn(true); state='play';
   nextStir=runTime+rnd(14,22)*diff.stir;
   toast('LEVEL '+currentLevel+' — '+levelCfg.name+': '+levelCfg.desc);
+  toast(activeMap.theme.name+' · '+Math.round(WORLD/10)+'m · 장애물 '+activeMap.obstacleCount+'개');
   toast('오늘의 미션 — '+mission.title+': '+mission.desc);
   if(currentLevel===1) toast(mode==='solo'?'연습 모드: 왼손이 뒷사람, 오른손이 앞사람!':'협동 모드: 서로 탓할 준비 되셨습니까');
 }
@@ -858,7 +975,7 @@ function update(dt){
     const dmg=silentZone.active?6:4; meter-=dmg*diff.drain; noiseCnt++; sinceDmg=0;
     addFault(side,dmg,'mic'); toast(silentZone.active?'🤫 조용히 하세요!':'🔊 너무 시끄럽습니다!'); shake=5;
   }
-  const silentXs=[3260,5750];
+  const silentXs=activeMap.silentXs;
   for(let i=0;i<silentXs.length;i++) if(!silentZone.active&&!silentVisited[i]&&chest.x>silentXs[i]) beginSilentEvent(i);
   if(silentZone.active){
     silentZone.t-=dt;
@@ -943,13 +1060,13 @@ function update(dt){
   // 택시: 부장님을 표시 구역에 내려놓으면 800m를 건너뛴다
   if(taxi.active&&!taxi.success&&!taxi.failed){
     if(chest.x>taxi.x0-80&&chest.x<taxi.x1+80){
-      if(!taxi.entered){ taxi.entered=true; toast('🚕 뒷문에 조심히 내려놓으면 800m 단축!'); }
+      if(!taxi.entered){ taxi.entered=true; toast('🚕 뒷문에 조심히 내려놓으면 '+Math.round(activeMap.taxiSkip/10)+'m 단축!'); }
       taxi.t+=dt;
       const inside=chest.x>taxi.x0+35&&chest.x<taxi.x1-35&&pelvis.x>taxi.x0+20&&pelvis.x<taxi.x1-20;
       if(inside&&!anyGrip&&(chest.onGround||pelvis.onGround)&&bossVel(chest)<95){
         taxi.success=true; taxi.active=false; addRescue('team','택시 탑승 성공',400); sBell();
-        const dx=800; for(const c of carriers)c.x+=dx; for(const p of boss.list){p.x+=dx;p.px+=dx;}
-        toast('🚕 거리 -800m! 기사님, 명진아파트로요');
+        const dx=activeMap.taxiSkip; for(const c of carriers)c.x+=dx; for(const p of boss.list){p.x+=dx;p.px+=dx;}
+        toast('🚕 거리 -'+Math.round(dx/10)+'m! 기사님, 명진아파트로요');
       } else if(taxi.t>12){ taxi.failed=true; taxi.active=false; toast('🚕 “손님, 그냥 내려주세요.”'); }
     }
   }
@@ -1050,7 +1167,7 @@ function draw(dt){
   cx.save();
   cx.clearRect(0,0,VW,VH);
   const sky=cx.createLinearGradient(0,0,0,VH);
-  sky.addColorStop(0,'#0b1026'); sky.addColorStop(0.62,'#141b3d'); sky.addColorStop(1,'#1c2447');
+  sky.addColorStop(0,activeMap.theme.top); sky.addColorStop(0.62,activeMap.theme.near); sky.addColorStop(1,activeMap.theme.bottom);
   cx.fillStyle=sky; cx.fillRect(0,0,VW,VH);
 
   // 별/달
@@ -1167,11 +1284,12 @@ function drawDecos(){
   cx.fillStyle='#141a36'; cx.fillRect(60,G_Y-160,80,60); cx.fillRect(160,G_Y-160,80,60);
   cx.fillStyle='rgba(255,178,84,0.85)'; cx.fillRect(60,G_Y-90,180,70);
   const flick = Math.sin(titleT*7)>-0.85?1:0.4;
-  cx.globalAlpha=flick; neon(200,G_Y-205,'명진갈비',' #ff5d8f'.trim(),26); cx.globalAlpha=1;
-  neon(320,G_Y-120,'2차 노래방','#7c6cff',15);
-  // 해장국집
-  cx.fillStyle='#1f2750'; cx.fillRect(5200,G_Y-170,260,170);
-  neon(5330,G_Y-185,'24시 해장국','#ffd45e',22);
+  cx.globalAlpha=flick; neon(200,G_Y-205,activeMap.theme.sign,activeMap.theme.accent,26); cx.globalAlpha=1;
+  neon(320,G_Y-120,'LEVEL '+currentLevel+' 출발','#7c6cff',15);
+  // 레벨별 랜드마크
+  const landmarkX=activeMap.landmarkX;
+  cx.fillStyle=activeMap.theme.near; cx.fillRect(landmarkX-130,G_Y-170,260,170);
+  neon(landmarkX,G_Y-185,activeMap.theme.name,activeMap.theme.accent,22);
   // 전봇대(체크포인트)
   for(const cp of CHECKPOINTS.slice(0,levelCfg.cps)){
     if(cp.x<400) continue;
@@ -1183,8 +1301,9 @@ function drawDecos(){
     if(on){ cx.fillStyle='rgba(125,255,168,0.1)'; cx.beginPath(); cx.arc(cp.x,G_Y-250,26,0,7); cx.fill(); }
   }
   // 벤치
-  cx.fillStyle='#6b4f35'; cx.fillRect(5520,G_Y-34,110,10);
-  cx.fillStyle='#54483c'; cx.fillRect(5528,G_Y-24,10,24); cx.fillRect(5612,G_Y-24,10,24);
+  const benchX=GOAL_X0-720;
+  cx.fillStyle='#6b4f35'; cx.fillRect(benchX,G_Y-34,110,10);
+  cx.fillStyle='#54483c'; cx.fillRect(benchX+8,G_Y-24,10,24); cx.fillRect(benchX+92,G_Y-24,10,24);
   // 택시 대표 구간
   if(!taxi.success){
     cx.fillStyle=taxi.failed?'#55596a':'#e8bd34'; roundRect(taxi.x0,G_Y-108,taxi.x1-taxi.x0,100,22); cx.fill();
@@ -1226,16 +1345,17 @@ function drawDecos(){
     if(catZone.spooked&&catx>0){ cx.font='bold 16px sans-serif'; cx.fillStyle='#fff'; cx.fillText('!!',catx,G_Y-42); }
   }
   // 아파트 현관(골)
-  cx.fillStyle='#242c52'; cx.fillRect(6660,G_Y-320,540,320);
+  const aptX=GOAL_X0-60, aptW=GOAL_X1-GOAL_X0+120, doorX=GOAL_CX-55;
+  cx.fillStyle='#242c52'; cx.fillRect(aptX,G_Y-320,aptW,320);
   cx.fillStyle='rgba(255,214,140,0.5)';
   for(let fy=0; fy<4; fy++) for(let fx=0; fx<5; fx++)
-    if((fx*7+fy*3)%3!==0) cx.fillRect(6690+fx*104, G_Y-300+fy*66, 30, 24);
+    if((fx*7+fy*3+currentLevel)%3!==0) cx.fillRect(aptX+30+fx*((aptW-60)/5),G_Y-300+fy*66,30,24);
   const doorLit = state==='clear'&&clearT>0.7;
-  cx.fillStyle='#39415c'; cx.fillRect(6780,G_Y-130,110,130);
-  cx.fillStyle=doorLit?'#ffdf9e':'#141a36'; cx.fillRect(6790,G_Y-120,90,120);
-  cx.fillStyle='#242c52'; cx.fillRect(6830,G_Y-70,8,16);
+  cx.fillStyle='#39415c'; cx.fillRect(doorX,G_Y-130,110,130);
+  cx.fillStyle=doorLit?'#ffdf9e':'#141a36'; cx.fillRect(doorX+10,G_Y-120,90,120);
+  cx.fillStyle='#242c52'; cx.fillRect(doorX+50,G_Y-70,8,16);
   cx.fillStyle='#e8ecff'; cx.font='bold 15px sans-serif'; cx.textAlign='center';
-  cx.fillText('명진아파트 101동',6835,G_Y-146);
+  cx.fillText('명진아파트 '+String(currentLevel).padStart(2,'0')+'동',GOAL_CX,G_Y-146);
   // 골 존 표시
   if(state==='play'){
     cx.fillStyle='rgba(125,255,168,'+(0.06+0.04*Math.sin(titleT*3))+')';
@@ -1413,7 +1533,7 @@ function drawHUD(){
   const prog=clamp(boss.pts.chest.x/GOAL_CX,0,1);
   cx.fillStyle='#ffd45e'; cx.beginPath(); cx.arc(px0+pw*prog,py0+5,6,0,7); cx.fill();
   cx.fillStyle='#aeb9e6'; cx.font='bold 12px sans-serif'; cx.textAlign='center';
-  cx.fillText('LEVEL '+currentLevel+'/'+LEVELS.length+' · '+levelCfg.name+' · 집까지 '+Math.max(0,Math.round((GOAL_CX-boss.pts.chest.x)/10))+'m',px0+pw/2,py0+17);
+  cx.fillText('MAP '+String(currentLevel).padStart(2,'0')+' · '+activeMap.theme.name+' · '+Math.max(0,Math.round((GOAL_CX-boss.pts.chest.x)/10))+'m · 장애물 '+activeMap.obstacleCount,px0+pw/2,py0+17);
   // 우측 상단 스탯
   cx.textAlign='right'; cx.fillStyle='rgba(223,230,255,0.85)'; cx.font='bold 14px sans-serif';
   const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
@@ -1505,7 +1625,7 @@ function drawTitle(){
   cx.strokeStyle='#e2564b'; cx.lineWidth=3.5; roundRect(-56,-24,112,48,8); cx.stroke();
   cx.fillStyle='#e2564b'; cx.font='900 25px sans-serif'; cx.fillText('회식엔딩',0,9); cx.restore();
   cx.fillStyle='#aeb9e6'; cx.font='500 21px sans-serif';
-  cx.fillText('30개 레벨. 떨어뜨리지 말고, 깨우지 말고, 끝까지.',VW/2,236);
+  cx.fillText('30개 전부 다른 맵. 지형·배치·이벤트 위치까지 전부 다릅니다.',VW/2,236);
   drawBtn(VW/2-330,300,300,86,TOUCH_UI?'👆 혼자 터치 플레이':'[1]  혼자 연습',TOUCH_UI?'양쪽 엄지로 두 사람을 동시에 조작':'왼손=뒷사람(WASD+F) · 오른손=앞사람(방향키+Shift)', keys._h1);
   drawBtn(VW/2+30,300,300,86,TOUCH_UI?'👆 2인 터치 협동':'[2]  둘이서 협동',TOUCH_UI?'화면 양쪽을 한 사람씩 맡아 조작':'키보드 반씩 나눠 잡기 · 서로 탓할 준비 필수', keys._h2);
   // 조작표
@@ -1521,7 +1641,7 @@ function drawTitle(){
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.5.1 — 손가락별 멀티터치를 지원하는 PC·모바일 30레벨 캠페인',VW/2,646);
+  cx.fillText('v0.6.0 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
