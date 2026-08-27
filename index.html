@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.6.1</title>
+<title>부장님이 잠드셨다 v0.6.2</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -85,7 +85,7 @@
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.1
+   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.2
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -254,36 +254,36 @@ const GRAV = 2000, VG = 1900;
 const FDT = 1/60, SUB = 3, SDT = FDT/SUB, ITER = 6;
 
 const LEVELS = [
-  {name:'회식 탈출', desc:'원본 귀갓길. 기본기를 익히세요.', dmg:1,    drain:1,    par:220, grip:95, slip:0.12, stir:1,    eye:30, cat:130, passive:0,    start:100, cps:3},
-  {name:'골목의 턱', desc:'낮은 턱이 운반 박자를 흔듭니다.', dmg:1.08, drain:1.05, par:210, grip:93, slip:0.115,stir:0.94, eye:32, cat:125, passive:0,    start:100, cps:3},
-  {name:'간판 지옥', desc:'낮은 천장과 단차가 동시에 옵니다.', dmg:1.16, drain:1.12, par:200, grip:91, slip:0.105,stir:0.88, eye:35, cat:120, passive:0.015,start:100,cps:3},
-  {name:'고양이 골목', desc:'속도를 내면 사고가 연쇄됩니다.', dmg:1.25, drain:1.20, par:190, grip:88, slip:0.098,stir:0.81, eye:38, cat:110, passive:0.025,start:98, cps:3},
-  {name:'숙취 육교', desc:'오르막과 천장이 그립을 뜯어냅니다.', dmg:1.35, drain:1.30, par:180, grip:85, slip:0.090,stir:0.74, eye:42, cat:100, passive:0.04, start:96, cps:2},
-  {name:'택시 거부', desc:'회복 구간이 줄고 뒤척임이 빨라집니다.',dmg:1.48, drain:1.42, par:170, grip:82, slip:0.082,stir:0.67, eye:46, cat:92,  passive:0.055,start:94, cps:2},
-  {name:'새벽 세 시', desc:'부장님이 얕은 잠에서 시작합니다.', dmg:1.62, drain:1.55, par:160, grip:79, slip:0.074,stir:0.60, eye:50, cat:84,  passive:0.075,start:90, cps:2},
-  {name:'인사평가 전야',desc:'실수 한 번이 숙면도를 크게 깎습니다.', dmg:1.78, drain:1.68, par:150, grip:76, slip:0.067,stir:0.54, eye:56, cat:76,  passive:0.10, start:86, cps:2},
-  {name:'임원 관문', desc:'체크포인트는 출발점 하나뿐입니다.', dmg:1.95, drain:1.82, par:140, grip:73, slip:0.060,stir:0.48, eye:63, cat:68,  passive:0.13, start:82, cps:1},
-  {name:'월요일 예행연습',desc:'첫 번째 관문. 이제 진짜 귀가가 시작됩니다.', dmg:2.15, drain:2.00, par:130, grip:70, slip:0.052,stir:0.42, eye:70, cat:60, passive:0.17, start:78, cps:1},
-  {name:'막차 끊김', desc:'택시도 막차도 없습니다. 발밑만 믿으세요.', dmg:2.20, drain:2.05, par:128, grip:69, slip:0.050,stir:0.41, eye:71, cat:59, passive:0.18, start:78, cps:1},
-  {name:'편의점 불빛', desc:'좁은 통로에서 부장님이 더 자주 뒤척입니다.', dmg:2.26, drain:2.10, par:127, grip:68, slip:0.049,stir:0.40, eye:72, cat:58, passive:0.18, start:77, cps:1},
-  {name:'공사장 우회', desc:'턱과 자재가 안전한 보폭을 빼앗습니다.', dmg:2.32, drain:2.16, par:126, grip:67, slip:0.047,stir:0.39, eye:73, cat:57, passive:0.19, start:76, cps:1},
-  {name:'배달 오토바이', desc:'급하게 움직일수록 손이 더 빨리 미끄러집니다.', dmg:2.38, drain:2.22, par:125, grip:66, slip:0.046,stir:0.38, eye:74, cat:56, passive:0.19, start:75, cps:1},
-  {name:'경찰 검문', desc:'낮은 구조물 아래에서 호흡을 맞추세요.', dmg:2.44, drain:2.28, par:124, grip:65, slip:0.045,stir:0.37, eye:75, cat:55, passive:0.20, start:74, cps:1},
-  {name:'비상계단', desc:'연속 단차가 앞뒤 사람의 박자를 시험합니다.', dmg:2.50, drain:2.34, par:123, grip:64, slip:0.043,stir:0.36, eye:76, cat:54, passive:0.20, start:73, cps:1},
-  {name:'취객의 합창', desc:'소음 한 번이 연쇄 사고로 이어집니다.', dmg:2.56, drain:2.40, par:122, grip:63, slip:0.042,stir:0.35, eye:77, cat:53, passive:0.21, start:72, cps:1},
-  {name:'폭우 전조', desc:'그립 한계가 줄어들어 짧게 잡아야 합니다.', dmg:2.62, drain:2.46, par:121, grip:62, slip:0.041,stir:0.34, eye:78, cat:52, passive:0.21, start:71, cps:1},
-  {name:'새벽 시장', desc:'골목 전체가 장애물이 되기 시작합니다.', dmg:2.68, drain:2.52, par:120, grip:61, slip:0.039,stir:0.33, eye:79, cat:51, passive:0.22, start:70, cps:1},
-  {name:'강남대로 결승', desc:'두 번째 관문. 실수할 여유가 거의 없습니다.', dmg:2.74, drain:2.58, par:119, grip:60, slip:0.038,stir:0.32, eye:80, cat:50, passive:0.22, start:69, cps:1},
-  {name:'대리기사 실종', desc:'시작부터 얕은 잠입니다. 천천히 전진하세요.', dmg:2.80, drain:2.64, par:118, grip:59, slip:0.037,stir:0.31, eye:81, cat:49, passive:0.23, start:68, cps:1},
-  {name:'지하도 역풍', desc:'낮은 천장과 턱이 번갈아 덮칩니다.', dmg:2.86, drain:2.70, par:117, grip:58, slip:0.036,stir:0.30, eye:82, cat:48, passive:0.23, start:67, cps:1},
-  {name:'인사팀 전화', desc:'눈을 뜨는 구간이 길어지고 잦아집니다.', dmg:2.92, drain:2.76, par:116, grip:57, slip:0.035,stir:0.29, eye:83, cat:47, passive:0.24, start:66, cps:1},
-  {name:'회장님 목격', desc:'고양이 앞에서는 거의 멈춰야 합니다.', dmg:2.98, drain:2.82, par:115, grip:56, slip:0.034,stir:0.28, eye:84, cat:46, passive:0.24, start:65, cps:1},
-  {name:'동틀 무렵', desc:'남은 숙면도와 시간이 동시에 줄어듭니다.', dmg:3.04, drain:2.88, par:114, grip:55, slip:0.033,stir:0.27, eye:85, cat:45, passive:0.25, start:64, cps:1},
-  {name:'월요일 출근길', desc:'귀가 행렬과 출근 행렬이 충돌합니다.', dmg:3.10, drain:2.94, par:113, grip:54, slip:0.032,stir:0.26, eye:86, cat:44, passive:0.26, start:63, cps:1},
-  {name:'감사팀 관문', desc:'작은 충격도 치명적입니다. 놓지 마세요.', dmg:3.16, drain:3.00, par:112, grip:53, slip:0.030,stir:0.25, eye:87, cat:42, passive:0.27, start:62, cps:1},
-  {name:'승진 심사대', desc:'모든 구간에서 완벽한 합이 필요합니다.', dmg:3.24, drain:3.08, par:111, grip:52, slip:0.029,stir:0.24, eye:89, cat:40, passive:0.28, start:61, cps:1},
-  {name:'대표이사 앞', desc:'마지막 문턱. 한 번의 방심도 허용하지 않습니다.', dmg:3.32, drain:3.16, par:110, grip:51, slip:0.027,stir:0.22, eye:91, cat:37, passive:0.29, start:60, cps:1},
-  {name:'전설의 귀가', desc:'30단계 최종전. 부장님을 집까지 배달하세요.', dmg:3.40, drain:3.24, par:108, grip:50, slip:0.025,stir:0.20, eye:92, cat:34, passive:0.30, start:60, cps:1}
+  {name:'회식 탈출', desc:'원본 귀갓길. 기본기를 익히세요.', dmg:1.95, drain:1.85, par:150, grip:73, slip:0.058,stir:0.48, eye:62, cat:70, passive:0.12, start:82, cps:2},
+  {name:'골목의 턱', desc:'낮은 턱이 운반 박자를 흔듭니다.', dmg:2.03, drain:1.93, par:148, grip:72, slip:0.056,stir:0.47, eye:63, cat:68, passive:0.13, start:81, cps:2},
+  {name:'간판 지옥', desc:'낮은 천장과 단차가 동시에 옵니다.', dmg:2.12, drain:2.01, par:146, grip:71, slip:0.055,stir:0.46, eye:64, cat:67, passive:0.14, start:80, cps:1},
+  {name:'고양이 골목', desc:'속도를 내면 사고가 연쇄됩니다.', dmg:2.20, drain:2.09, par:144, grip:69, slip:0.053,stir:0.44, eye:66, cat:65, passive:0.15, start:79, cps:1},
+  {name:'숙취 육교', desc:'오르막과 천장이 그립을 뜯어냅니다.', dmg:2.29, drain:2.17, par:142, grip:68, slip:0.052,stir:0.43, eye:67, cat:63, passive:0.16, start:78, cps:1},
+  {name:'택시 거부', desc:'회복 구간이 줄고 뒤척임이 빨라집니다.', dmg:2.37, drain:2.26, par:140, grip:67, slip:0.050,stir:0.42, eye:68, cat:62, passive:0.17, start:76, cps:1},
+  {name:'새벽 세 시', desc:'부장님이 얕은 잠에서 시작합니다.', dmg:2.46, drain:2.34, par:138, grip:66, slip:0.049,stir:0.41, eye:69, cat:60, passive:0.18, start:75, cps:1},
+  {name:'인사평가 전야', desc:'실수 한 번이 숙면도를 크게 깎습니다.', dmg:2.54, drain:2.42, par:136, grip:65, slip:0.047,stir:0.40, eye:70, cat:58, passive:0.19, start:74, cps:1},
+  {name:'임원 관문', desc:'체크포인트는 출발점 하나뿐입니다.', dmg:2.63, drain:2.50, par:133, grip:63, slip:0.046,stir:0.38, eye:72, cat:57, passive:0.20, start:73, cps:1},
+  {name:'월요일 예행연습', desc:'첫 번째 관문. 이제 진짜 귀가가 시작됩니다.', dmg:2.71, drain:2.58, par:131, grip:62, slip:0.044,stir:0.37, eye:73, cat:55, passive:0.21, start:72, cps:1},
+  {name:'막차 끊김', desc:'택시도 막차도 없습니다. 발밑만 믿으세요.', dmg:2.79, drain:2.66, par:129, grip:61, slip:0.043,stir:0.36, eye:74, cat:53, passive:0.22, start:71, cps:1},
+  {name:'편의점 불빛', desc:'좁은 통로에서 부장님이 더 자주 뒤척입니다.', dmg:2.88, drain:2.74, par:127, grip:60, slip:0.041,stir:0.35, eye:75, cat:52, passive:0.23, start:70, cps:1},
+  {name:'공사장 우회', desc:'턱과 자재가 안전한 보폭을 빼앗습니다.', dmg:2.96, drain:2.82, par:125, grip:59, slip:0.040,stir:0.34, eye:76, cat:50, passive:0.24, start:69, cps:1},
+  {name:'배달 오토바이', desc:'급하게 움직일수록 손이 더 빨리 미끄러집니다.', dmg:3.05, drain:2.90, par:123, grip:57, slip:0.038,stir:0.32, eye:78, cat:48, passive:0.25, start:68, cps:1},
+  {name:'경찰 검문', desc:'낮은 구조물 아래에서 호흡을 맞추세요.', dmg:3.13, drain:2.98, par:121, grip:56, slip:0.037,stir:0.31, eye:79, cat:47, passive:0.26, start:67, cps:1},
+  {name:'비상계단', desc:'연속 단차가 앞뒤 사람의 박자를 시험합니다.', dmg:3.22, drain:3.07, par:119, grip:55, slip:0.035,stir:0.30, eye:80, cat:45, passive:0.28, start:65, cps:1},
+  {name:'취객의 합창', desc:'소음 한 번이 연쇄 사고로 이어집니다.', dmg:3.30, drain:3.15, par:117, grip:54, slip:0.034,stir:0.29, eye:81, cat:44, passive:0.29, start:64, cps:1},
+  {name:'폭우 전조', desc:'그립 한계가 줄어들어 짧게 잡아야 합니다.', dmg:3.39, drain:3.23, par:115, grip:52, slip:0.032,stir:0.27, eye:83, cat:42, passive:0.30, start:63, cps:1},
+  {name:'새벽 시장', desc:'골목 전체가 장애물이 되기 시작합니다.', dmg:3.47, drain:3.31, par:113, grip:51, slip:0.031,stir:0.26, eye:84, cat:40, passive:0.31, start:62, cps:1},
+  {name:'강남대로 결승', desc:'두 번째 관문. 실수할 여유가 거의 없습니다.', dmg:3.56, drain:3.39, par:111, grip:50, slip:0.029,stir:0.25, eye:85, cat:39, passive:0.32, start:61, cps:1},
+  {name:'대리기사 실종', desc:'시작부터 얕은 잠입니다. 천천히 전진하세요.', dmg:3.64, drain:3.47, par:109, grip:49, slip:0.028,stir:0.24, eye:86, cat:37, passive:0.33, start:60, cps:1},
+  {name:'지하도 역풍', desc:'낮은 천장과 턱이 번갈아 덮칩니다.', dmg:3.72, drain:3.55, par:107, grip:48, slip:0.026,stir:0.23, eye:87, cat:35, passive:0.34, start:59, cps:1},
+  {name:'인사팀 전화', desc:'눈을 뜨는 구간이 길어지고 잦아집니다.', dmg:3.81, drain:3.63, par:104, grip:46, slip:0.025,stir:0.21, eye:89, cat:34, passive:0.35, start:58, cps:1},
+  {name:'회장님 목격', desc:'고양이 앞에서는 거의 멈춰야 합니다.', dmg:3.89, drain:3.71, par:102, grip:45, slip:0.023,stir:0.20, eye:90, cat:32, passive:0.36, start:57, cps:1},
+  {name:'동틀 무렵', desc:'남은 숙면도와 시간이 동시에 줄어듭니다.', dmg:3.98, drain:3.79, par:100, grip:44, slip:0.022,stir:0.19, eye:91, cat:30, passive:0.37, start:56, cps:1},
+  {name:'월요일 출근길', desc:'귀가 행렬과 출근 행렬이 충돌합니다.', dmg:4.06, drain:3.88, par:98, grip:43, slip:0.020,stir:0.18, eye:92, cat:29, passive:0.38, start:54, cps:1},
+  {name:'감사팀 관문', desc:'작은 충격도 치명적입니다. 놓지 마세요.', dmg:4.15, drain:3.96, par:96, grip:42, slip:0.019,stir:0.17, eye:93, cat:27, passive:0.39, start:53, cps:1},
+  {name:'승진 심사대', desc:'모든 구간에서 완벽한 합이 필요합니다.', dmg:4.23, drain:4.04, par:94, grip:40, slip:0.017,stir:0.15, eye:95, cat:25, passive:0.40, start:52, cps:1},
+  {name:'대표이사 앞', desc:'마지막 문턱. 한 번의 방심도 허용하지 않습니다.', dmg:4.32, drain:4.12, par:92, grip:39, slip:0.016,stir:0.14, eye:96, cat:24, passive:0.41, start:51, cps:1},
+  {name:'전설의 귀가', desc:'30단계 최종전. 부장님을 집까지 배달하세요.', dmg:4.40, drain:4.20, par:90, grip:38, slip:0.014,stir:0.13, eye:97, cat:22, passive:0.42, start:50, cps:1}
 ];
 
 const MAP_THEMES = [
@@ -303,36 +303,36 @@ function mapRng(seed){
    L:길이  g:장애물 그룹 수  lay:배치 곡선  th:테마  kinds:장애물 어휘
    cat/tr/tx:고양이·쓰레기·택시 위치(맵 비율)  sil:정숙 구간  cp:체크포인트  hz:장애물 강도 */
 const MAP_RECIPES=[
- {L:4200,g:9, lay:'even',  th:0,kinds:[0,7],        cat:.30,tr:.70,tx:.55,sil:[.44,.78],cp:[.34,.68],hz:0.95},
- {L:4350,g:10,lay:'rhythm',th:0,kinds:[3,10],       cat:.24,tr:.66,tx:.52,sil:[.40,.80],cp:[.32,.66],hz:0.98},
- {L:4450,g:10,lay:'even',  th:1,kinds:[1,4],        cat:.36,tr:.74,tx:.50,sil:[.48,.82],cp:[.36,.70],hz:1.00},
- {L:4550,g:11,lay:'waves', th:0,kinds:[0,5,12],     cat:.52,tr:.28,tx:.58,sil:[.42,.74],cp:[.30,.64],hz:1.02},
- {L:4700,g:12,lay:'mid',   th:2,kinds:[2,12,4],     cat:.22,tr:.78,tx:.48,sil:[.38,.84],cp:[.35,.69],hz:1.05},
- {L:4800,g:12,lay:'back',  th:4,kinds:[9,3],        cat:.60,tr:.30,tx:.42,sil:[.50,.80],cp:[.33,.70],hz:1.07},
- {L:4900,g:13,lay:'breath',th:1,kinds:[6,1],        cat:.34,tr:.62,tx:.56,sil:[.44,.76],cp:[.30,.72],hz:1.10},
- {L:4950,g:13,lay:'front', th:3,kinds:[5,9,10],     cat:.70,tr:.40,tx:.54,sil:[.36,.82],cp:[.36,.66],hz:1.12},
- {L:5150,g:14,lay:'finale',th:4,kinds:[6,11,2],     cat:.26,tr:.58,tx:.50,sil:[.46,.72],cp:[.34,.68],hz:1.15},
- {L:5250,g:14,lay:'waves', th:5,kinds:[8,0,4],      cat:.48,tr:.74,tx:.57,sil:[.40,.78],cp:[.31,.67],hz:1.17},
- {L:5400,g:15,lay:'even',  th:4,kinds:[9,12,6],     cat:.32,tr:.68,tx:.44,sil:[.48,.80],cp:[.35,.70],hz:1.19},
- {L:5450,g:15,lay:'rhythm',th:0,kinds:[1,7],        cat:.58,tr:.24,tx:.53,sil:[.38,.76],cp:[.30,.65],hz:1.21},
- {L:5600,g:16,lay:'waves', th:2,kinds:[8,5,2],      cat:.20,tr:.64,tx:.56,sil:[.44,.84],cp:[.36,.71],hz:1.23},
- {L:5700,g:16,lay:'rhythm',th:1,kinds:[10,3,12],    cat:.42,tr:.76,tx:.48,sil:[.50,.78],cp:[.32,.68],hz:1.25},
- {L:5800,g:16,lay:'mid',   th:3,kinds:[11,6],       cat:.66,tr:.34,tx:.55,sil:[.42,.72],cp:[.34,.66],hz:1.27},
- {L:5950,g:17,lay:'even',  th:2,kinds:[2,13,9],     cat:.28,tr:.70,tx:.50,sil:[.46,.82],cp:[.37,.69],hz:1.30},
- {L:6050,g:17,lay:'breath',th:0,kinds:[5,4,10],     cat:.50,tr:.30,tx:.57,sil:[.36,.74],cp:[.30,.72],hz:1.32},
- {L:6150,g:18,lay:'front', th:3,kinds:[7,12,1],     cat:.38,tr:.62,tx:.46,sil:[.48,.80],cp:[.33,.64],hz:1.34},
- {L:6300,g:18,lay:'waves', th:1,kinds:[7,5,8],      cat:.24,tr:.56,tx:.54,sil:[.40,.78],cp:[.35,.70],hz:1.36},
- {L:6500,g:19,lay:'finale',th:4,kinds:[6,9,11],     cat:.62,tr:.36,tx:.52,sil:[.44,.76],cp:[.31,.66],hz:1.40},
- {L:6800,g:19,lay:'back',  th:4,kinds:[0,8,10],     cat:.30,tr:.72,tx:.49,sil:[.50,.82],cp:[.36,.68],hz:1.42},
- {L:7000,g:20,lay:'rhythm',th:3,kinds:[1,8,11],     cat:.46,tr:.26,tx:.55,sil:[.38,.72],cp:[.32,.70],hz:1.44},
- {L:7150,g:20,lay:'mid',   th:1,kinds:[9,13,6],     cat:.68,tr:.44,tx:.51,sil:[.46,.78],cp:[.34,.67],hz:1.46},
- {L:7350,g:21,lay:'waves', th:0,kinds:[3,11,5],     cat:.54,tr:.78,tx:.47,sil:[.42,.84],cp:[.30,.71],hz:1.48},
- {L:7500,g:21,lay:'breath',th:5,kinds:[12,2,8],     cat:.22,tr:.60,tx:.56,sil:[.48,.74],cp:[.35,.69],hz:1.50},
- {L:7700,g:22,lay:'front', th:4,kinds:[10,6,7],     cat:.40,tr:.68,tx:.45,sil:[.36,.80],cp:[.33,.65],hz:1.52},
- {L:7950,g:22,lay:'finale',th:2,kinds:[8,9,1],      cat:.64,tr:.32,tx:.53,sil:[.44,.78],cp:[.36,.70],hz:1.54},
- {L:8200,g:23,lay:'rhythm',th:3,kinds:[11,13,3,12], cat:.26,tr:.74,tx:.50,sil:[.50,.76],cp:[.31,.68],hz:1.56},
- {L:8500,g:23,lay:'even',  th:4,kinds:[6,1,9,8],    cat:.48,tr:.58,tx:.55,sil:[.40,.82],cp:[.34,.66],hz:1.58},
- {L:9000,g:24,lay:'back',  th:5,kinds:[8,11,9,6,10],cat:.32,tr:.70,tx:.48,sil:[.46,.80],cp:[.35,.69],hz:1.62}
+ {L:4200,g:9, lay:'even',  th:0,kinds:[0,7],        cat:.30,tr:.70,tx:.55,sil:[.44,.78],cp:[.34,.68],hz:1.15},
+ {L:4350,g:10,lay:'rhythm',th:0,kinds:[3,10],       cat:.24,tr:.66,tx:.52,sil:[.40,.80],cp:[.32,.66],hz:1.17},
+ {L:4450,g:10,lay:'even',  th:1,kinds:[1,4],        cat:.36,tr:.74,tx:.50,sil:[.48,.82],cp:[.36,.70],hz:1.19},
+ {L:4550,g:11,lay:'waves', th:0,kinds:[0,5,12],     cat:.52,tr:.28,tx:.58,sil:[.42,.74],cp:[.30,.64],hz:1.21},
+ {L:4700,g:12,lay:'mid',   th:2,kinds:[2,12,4],     cat:.22,tr:.78,tx:.48,sil:[.38,.84],cp:[.35,.69],hz:1.23},
+ {L:4800,g:12,lay:'back',  th:4,kinds:[9,3],        cat:.60,tr:.30,tx:.42,sil:[.50,.80],cp:[.33,.70],hz:1.25},
+ {L:4900,g:13,lay:'breath',th:1,kinds:[6,1],        cat:.34,tr:.62,tx:.56,sil:[.44,.76],cp:[.30,.72],hz:1.27},
+ {L:4950,g:13,lay:'front', th:3,kinds:[5,9,10],     cat:.70,tr:.40,tx:.54,sil:[.36,.82],cp:[.36,.66],hz:1.29},
+ {L:5150,g:14,lay:'finale',th:4,kinds:[6,11,2],     cat:.26,tr:.58,tx:.50,sil:[.46,.72],cp:[.34,.68],hz:1.32},
+ {L:5250,g:14,lay:'waves', th:5,kinds:[8,0,4],      cat:.48,tr:.74,tx:.57,sil:[.40,.78],cp:[.31,.67],hz:1.34},
+ {L:5400,g:15,lay:'even',  th:4,kinds:[9,12,6],     cat:.32,tr:.68,tx:.44,sil:[.48,.80],cp:[.35,.70],hz:1.36},
+ {L:5450,g:15,lay:'rhythm',th:0,kinds:[1,7],        cat:.58,tr:.24,tx:.53,sil:[.38,.76],cp:[.30,.65],hz:1.38},
+ {L:5600,g:16,lay:'waves', th:2,kinds:[8,5,2],      cat:.20,tr:.64,tx:.56,sil:[.44,.84],cp:[.36,.71],hz:1.40},
+ {L:5700,g:16,lay:'rhythm',th:1,kinds:[10,3,12],    cat:.42,tr:.76,tx:.48,sil:[.50,.78],cp:[.32,.68],hz:1.42},
+ {L:5800,g:16,lay:'mid',   th:3,kinds:[11,6],       cat:.66,tr:.34,tx:.55,sil:[.42,.72],cp:[.34,.66],hz:1.44},
+ {L:5950,g:17,lay:'even',  th:2,kinds:[2,13,9],     cat:.28,tr:.70,tx:.50,sil:[.46,.82],cp:[.37,.69],hz:1.46},
+ {L:6050,g:17,lay:'breath',th:0,kinds:[5,4,10],     cat:.50,tr:.30,tx:.57,sil:[.36,.74],cp:[.30,.72],hz:1.48},
+ {L:6150,g:18,lay:'front', th:3,kinds:[7,12,1],     cat:.38,tr:.62,tx:.46,sil:[.48,.80],cp:[.33,.64],hz:1.50},
+ {L:6300,g:18,lay:'waves', th:1,kinds:[7,5,8],      cat:.24,tr:.56,tx:.54,sil:[.40,.78],cp:[.35,.70],hz:1.52},
+ {L:6500,g:19,lay:'finale',th:4,kinds:[6,9,11],     cat:.62,tr:.36,tx:.52,sil:[.44,.76],cp:[.31,.66],hz:1.54},
+ {L:6800,g:19,lay:'back',  th:4,kinds:[0,8,10],     cat:.30,tr:.72,tx:.49,sil:[.50,.82],cp:[.36,.68],hz:1.56},
+ {L:7000,g:20,lay:'rhythm',th:3,kinds:[1,8,11],     cat:.46,tr:.26,tx:.55,sil:[.38,.72],cp:[.32,.70],hz:1.58},
+ {L:7150,g:20,lay:'mid',   th:1,kinds:[9,13,6],     cat:.68,tr:.44,tx:.51,sil:[.46,.78],cp:[.34,.67],hz:1.61},
+ {L:7350,g:21,lay:'waves', th:0,kinds:[3,11,5],     cat:.54,tr:.78,tx:.47,sil:[.42,.84],cp:[.30,.71],hz:1.63},
+ {L:7500,g:21,lay:'breath',th:5,kinds:[12,2,8],     cat:.22,tr:.60,tx:.56,sil:[.48,.74],cp:[.35,.69],hz:1.65},
+ {L:7700,g:22,lay:'front', th:4,kinds:[10,6,7],     cat:.40,tr:.68,tx:.45,sil:[.36,.80],cp:[.33,.65],hz:1.67},
+ {L:7950,g:22,lay:'finale',th:2,kinds:[8,9,1],      cat:.64,tr:.32,tx:.53,sil:[.44,.78],cp:[.36,.70],hz:1.69},
+ {L:8200,g:23,lay:'rhythm',th:3,kinds:[11,13,3,12], cat:.26,tr:.74,tx:.50,sil:[.50,.76],cp:[.31,.68],hz:1.71},
+ {L:8500,g:23,lay:'even',  th:4,kinds:[6,1,9,8],    cat:.48,tr:.58,tx:.55,sil:[.40,.82],cp:[.34,.66],hz:1.73},
+ {L:9000,g:24,lay:'back',  th:5,kinds:[8,11,9,6,10],cat:.32,tr:.70,tx:.48,sil:[.46,.80],cp:[.35,.69],hz:1.75}
 ];
 /* 배치 곡선: 맵 진행도 t(0~1)에서의 장애물 밀도 가중치 */
 const LAYOUT_W={
@@ -372,7 +372,7 @@ function box(x,y,w,h,tag){ solids.push({x,y,w,h,tag:tag||''}); return solids[sol
 function addObstacleGroup(x,kind,rng,level,hz){
   const H=v=>Math.min(84,Math.round(v));
   const h=H((16+rng()*14+level*0.8)*hz);
-  const clear=Math.max(52,Math.round(76-level*0.8)); // 천장 아래 통과 여유(레벨↑=좁아짐)
+  const clear=Math.max(52,Math.round(61-level*0.55)); // 천장 통과 여유: lvl1=60, 16+에선 52(엇갈림 박스는 -8)
   if(kind===0){        // 오르막 3계단
     for(let i=0;i<3;i++){ const hh=H(h+i*7); box(x+i*34,G_Y-hh,30,hh,'level'); }
   } else if(kind===1){ // 낮은 천장 3연속
@@ -429,11 +429,11 @@ function buildLevelWorld(level){
   const rng=mapRng(activeMap.seed);
   const wfn=LAYOUT_W[R.lay]||LAYOUT_W.even;
   const waveK=3+level%3;
-  /* 밀도는 실제 남은 공간에서 계산: 목표 간격이 레벨 1의 202px에서 30의 112px까지 줄어든다 */
-  const sp=Math.max(112,205-level*3.2)*(R.lay==='rhythm'?0.8:1);
-  const groups=clamp(Math.round(freePx/sp),6,R.g+12);
+  /* 밀도는 실제 남은 공간에서 계산: 목표 간격이 레벨 1의 160px에서 30의 96px까지 줄어든다 */
+  const sp=Math.max(96,162-level*2.3)*(R.lay==='rhythm'?0.82:1);
+  const groups=clamp(Math.round(freePx/sp),8,R.g+18);
   activeMap.hazardGroups=groups;
-  const minGap=Math.max(102,sp*0.62);
+  const minGap=Math.max(92,sp*0.6);
   const chosen=[];
   for(let n=0;n<groups;n++){
     let total=0;
@@ -1641,7 +1641,7 @@ function drawTitle(){
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.6.1 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
+  cx.fillText('v0.6.2 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
