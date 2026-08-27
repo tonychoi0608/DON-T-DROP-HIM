@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.6.0</title>
+<title>부장님이 잠드셨다 v0.6.1</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -85,7 +85,7 @@
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.0
+   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.1
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -303,36 +303,36 @@ function mapRng(seed){
    L:길이  g:장애물 그룹 수  lay:배치 곡선  th:테마  kinds:장애물 어휘
    cat/tr/tx:고양이·쓰레기·택시 위치(맵 비율)  sil:정숙 구간  cp:체크포인트  hz:장애물 강도 */
 const MAP_RECIPES=[
- {L:4200,g:9, lay:'even',  th:0,kinds:[0,7],        cat:.30,tr:.70,tx:.55,sil:[.44,.78],cp:[.34,.68],hz:.75},
- {L:4350,g:10,lay:'rhythm',th:0,kinds:[3,10],       cat:.24,tr:.66,tx:.52,sil:[.40,.80],cp:[.32,.66],hz:.80},
- {L:4450,g:10,lay:'even',  th:1,kinds:[1,4],        cat:.36,tr:.74,tx:.50,sil:[.48,.82],cp:[.36,.70],hz:.80},
- {L:4550,g:11,lay:'waves', th:0,kinds:[0,5,12],     cat:.52,tr:.28,tx:.58,sil:[.42,.74],cp:[.30,.64],hz:.85},
- {L:4700,g:12,lay:'mid',   th:2,kinds:[2,12,4],     cat:.22,tr:.78,tx:.48,sil:[.38,.84],cp:[.35,.69],hz:.90},
- {L:4800,g:12,lay:'back',  th:4,kinds:[9,3],        cat:.60,tr:.30,tx:.42,sil:[.50,.80],cp:[.33,.70],hz:.90},
- {L:4900,g:13,lay:'breath',th:1,kinds:[6,1],        cat:.34,tr:.62,tx:.56,sil:[.44,.76],cp:[.30,.72],hz:.95},
- {L:4950,g:13,lay:'front', th:3,kinds:[5,9,10],     cat:.70,tr:.40,tx:.54,sil:[.36,.82],cp:[.36,.66],hz:.95},
- {L:5150,g:14,lay:'finale',th:4,kinds:[6,11,2],     cat:.26,tr:.58,tx:.50,sil:[.46,.72],cp:[.34,.68],hz:1.00},
- {L:5250,g:14,lay:'waves', th:5,kinds:[8,0,4],      cat:.48,tr:.74,tx:.57,sil:[.40,.78],cp:[.31,.67],hz:1.00},
- {L:5400,g:15,lay:'even',  th:4,kinds:[9,12,6],     cat:.32,tr:.68,tx:.44,sil:[.48,.80],cp:[.35,.70],hz:1.02},
- {L:5450,g:15,lay:'rhythm',th:0,kinds:[1,7],        cat:.58,tr:.24,tx:.53,sil:[.38,.76],cp:[.30,.65],hz:1.05},
- {L:5600,g:16,lay:'waves', th:2,kinds:[8,5,2],      cat:.20,tr:.64,tx:.56,sil:[.44,.84],cp:[.36,.71],hz:1.05},
- {L:5700,g:16,lay:'rhythm',th:1,kinds:[10,3,12],    cat:.42,tr:.76,tx:.48,sil:[.50,.78],cp:[.32,.68],hz:1.08},
- {L:5800,g:16,lay:'mid',   th:3,kinds:[11,6],       cat:.66,tr:.34,tx:.55,sil:[.42,.72],cp:[.34,.66],hz:1.10},
- {L:5950,g:17,lay:'even',  th:2,kinds:[2,13,9],     cat:.28,tr:.70,tx:.50,sil:[.46,.82],cp:[.37,.69],hz:1.12},
- {L:6050,g:17,lay:'breath',th:0,kinds:[5,4,10],     cat:.50,tr:.30,tx:.57,sil:[.36,.74],cp:[.30,.72],hz:1.12},
- {L:6150,g:18,lay:'front', th:3,kinds:[7,12,1],     cat:.38,tr:.62,tx:.46,sil:[.48,.80],cp:[.33,.64],hz:1.15},
- {L:6300,g:18,lay:'waves', th:1,kinds:[7,5,8],      cat:.24,tr:.56,tx:.54,sil:[.40,.78],cp:[.35,.70],hz:1.15},
- {L:6500,g:19,lay:'finale',th:4,kinds:[6,9,11],     cat:.62,tr:.36,tx:.52,sil:[.44,.76],cp:[.31,.66],hz:1.20},
- {L:6800,g:19,lay:'back',  th:4,kinds:[0,8,10],     cat:.30,tr:.72,tx:.49,sil:[.50,.82],cp:[.36,.68],hz:1.20},
- {L:7000,g:20,lay:'rhythm',th:3,kinds:[1,8,11],     cat:.46,tr:.26,tx:.55,sil:[.38,.72],cp:[.32,.70],hz:1.25},
- {L:7150,g:20,lay:'mid',   th:1,kinds:[9,13,6],     cat:.68,tr:.44,tx:.51,sil:[.46,.78],cp:[.34,.67],hz:1.25},
- {L:7350,g:21,lay:'waves', th:0,kinds:[3,11,5],     cat:.54,tr:.78,tx:.47,sil:[.42,.84],cp:[.30,.71],hz:1.28},
- {L:7500,g:21,lay:'breath',th:5,kinds:[12,2,8],     cat:.22,tr:.60,tx:.56,sil:[.48,.74],cp:[.35,.69],hz:1.30},
- {L:7700,g:22,lay:'front', th:4,kinds:[10,6,7],     cat:.40,tr:.68,tx:.45,sil:[.36,.80],cp:[.33,.65],hz:1.30},
- {L:7950,g:22,lay:'finale',th:2,kinds:[8,9,1],      cat:.64,tr:.32,tx:.53,sil:[.44,.78],cp:[.36,.70],hz:1.35},
- {L:8200,g:23,lay:'rhythm',th:3,kinds:[11,13,3,12], cat:.26,tr:.74,tx:.50,sil:[.50,.76],cp:[.31,.68],hz:1.35},
- {L:8500,g:23,lay:'even',  th:4,kinds:[6,1,9,8],    cat:.48,tr:.58,tx:.55,sil:[.40,.82],cp:[.34,.66],hz:1.40},
- {L:9000,g:24,lay:'back',  th:5,kinds:[8,11,9,6,10],cat:.32,tr:.70,tx:.48,sil:[.46,.80],cp:[.35,.69],hz:1.45}
+ {L:4200,g:9, lay:'even',  th:0,kinds:[0,7],        cat:.30,tr:.70,tx:.55,sil:[.44,.78],cp:[.34,.68],hz:0.95},
+ {L:4350,g:10,lay:'rhythm',th:0,kinds:[3,10],       cat:.24,tr:.66,tx:.52,sil:[.40,.80],cp:[.32,.66],hz:0.98},
+ {L:4450,g:10,lay:'even',  th:1,kinds:[1,4],        cat:.36,tr:.74,tx:.50,sil:[.48,.82],cp:[.36,.70],hz:1.00},
+ {L:4550,g:11,lay:'waves', th:0,kinds:[0,5,12],     cat:.52,tr:.28,tx:.58,sil:[.42,.74],cp:[.30,.64],hz:1.02},
+ {L:4700,g:12,lay:'mid',   th:2,kinds:[2,12,4],     cat:.22,tr:.78,tx:.48,sil:[.38,.84],cp:[.35,.69],hz:1.05},
+ {L:4800,g:12,lay:'back',  th:4,kinds:[9,3],        cat:.60,tr:.30,tx:.42,sil:[.50,.80],cp:[.33,.70],hz:1.07},
+ {L:4900,g:13,lay:'breath',th:1,kinds:[6,1],        cat:.34,tr:.62,tx:.56,sil:[.44,.76],cp:[.30,.72],hz:1.10},
+ {L:4950,g:13,lay:'front', th:3,kinds:[5,9,10],     cat:.70,tr:.40,tx:.54,sil:[.36,.82],cp:[.36,.66],hz:1.12},
+ {L:5150,g:14,lay:'finale',th:4,kinds:[6,11,2],     cat:.26,tr:.58,tx:.50,sil:[.46,.72],cp:[.34,.68],hz:1.15},
+ {L:5250,g:14,lay:'waves', th:5,kinds:[8,0,4],      cat:.48,tr:.74,tx:.57,sil:[.40,.78],cp:[.31,.67],hz:1.17},
+ {L:5400,g:15,lay:'even',  th:4,kinds:[9,12,6],     cat:.32,tr:.68,tx:.44,sil:[.48,.80],cp:[.35,.70],hz:1.19},
+ {L:5450,g:15,lay:'rhythm',th:0,kinds:[1,7],        cat:.58,tr:.24,tx:.53,sil:[.38,.76],cp:[.30,.65],hz:1.21},
+ {L:5600,g:16,lay:'waves', th:2,kinds:[8,5,2],      cat:.20,tr:.64,tx:.56,sil:[.44,.84],cp:[.36,.71],hz:1.23},
+ {L:5700,g:16,lay:'rhythm',th:1,kinds:[10,3,12],    cat:.42,tr:.76,tx:.48,sil:[.50,.78],cp:[.32,.68],hz:1.25},
+ {L:5800,g:16,lay:'mid',   th:3,kinds:[11,6],       cat:.66,tr:.34,tx:.55,sil:[.42,.72],cp:[.34,.66],hz:1.27},
+ {L:5950,g:17,lay:'even',  th:2,kinds:[2,13,9],     cat:.28,tr:.70,tx:.50,sil:[.46,.82],cp:[.37,.69],hz:1.30},
+ {L:6050,g:17,lay:'breath',th:0,kinds:[5,4,10],     cat:.50,tr:.30,tx:.57,sil:[.36,.74],cp:[.30,.72],hz:1.32},
+ {L:6150,g:18,lay:'front', th:3,kinds:[7,12,1],     cat:.38,tr:.62,tx:.46,sil:[.48,.80],cp:[.33,.64],hz:1.34},
+ {L:6300,g:18,lay:'waves', th:1,kinds:[7,5,8],      cat:.24,tr:.56,tx:.54,sil:[.40,.78],cp:[.35,.70],hz:1.36},
+ {L:6500,g:19,lay:'finale',th:4,kinds:[6,9,11],     cat:.62,tr:.36,tx:.52,sil:[.44,.76],cp:[.31,.66],hz:1.40},
+ {L:6800,g:19,lay:'back',  th:4,kinds:[0,8,10],     cat:.30,tr:.72,tx:.49,sil:[.50,.82],cp:[.36,.68],hz:1.42},
+ {L:7000,g:20,lay:'rhythm',th:3,kinds:[1,8,11],     cat:.46,tr:.26,tx:.55,sil:[.38,.72],cp:[.32,.70],hz:1.44},
+ {L:7150,g:20,lay:'mid',   th:1,kinds:[9,13,6],     cat:.68,tr:.44,tx:.51,sil:[.46,.78],cp:[.34,.67],hz:1.46},
+ {L:7350,g:21,lay:'waves', th:0,kinds:[3,11,5],     cat:.54,tr:.78,tx:.47,sil:[.42,.84],cp:[.30,.71],hz:1.48},
+ {L:7500,g:21,lay:'breath',th:5,kinds:[12,2,8],     cat:.22,tr:.60,tx:.56,sil:[.48,.74],cp:[.35,.69],hz:1.50},
+ {L:7700,g:22,lay:'front', th:4,kinds:[10,6,7],     cat:.40,tr:.68,tx:.45,sil:[.36,.80],cp:[.33,.65],hz:1.52},
+ {L:7950,g:22,lay:'finale',th:2,kinds:[8,9,1],      cat:.64,tr:.32,tx:.53,sil:[.44,.78],cp:[.36,.70],hz:1.54},
+ {L:8200,g:23,lay:'rhythm',th:3,kinds:[11,13,3,12], cat:.26,tr:.74,tx:.50,sil:[.50,.76],cp:[.31,.68],hz:1.56},
+ {L:8500,g:23,lay:'even',  th:4,kinds:[6,1,9,8],    cat:.48,tr:.58,tx:.55,sil:[.40,.82],cp:[.34,.66],hz:1.58},
+ {L:9000,g:24,lay:'back',  th:5,kinds:[8,11,9,6,10],cat:.32,tr:.70,tx:.48,sil:[.46,.80],cp:[.35,.69],hz:1.62}
 ];
 /* 배치 곡선: 맵 진행도 t(0~1)에서의 장애물 밀도 가중치 */
 const LAYOUT_W={
@@ -372,7 +372,7 @@ function box(x,y,w,h,tag){ solids.push({x,y,w,h,tag:tag||''}); return solids[sol
 function addObstacleGroup(x,kind,rng,level,hz){
   const H=v=>Math.min(84,Math.round(v));
   const h=H((16+rng()*14+level*0.8)*hz);
-  const clear=Math.max(56,Math.round(84-level*0.9)); // 천장 아래 통과 여유(레벨↑=좁아짐)
+  const clear=Math.max(52,Math.round(76-level*0.8)); // 천장 아래 통과 여유(레벨↑=좁아짐)
   if(kind===0){        // 오르막 3계단
     for(let i=0;i<3;i++){ const hh=H(h+i*7); box(x+i*34,G_Y-hh,30,hh,'level'); }
   } else if(kind===1){ // 낮은 천장 3연속
@@ -429,11 +429,11 @@ function buildLevelWorld(level){
   const rng=mapRng(activeMap.seed);
   const wfn=LAYOUT_W[R.lay]||LAYOUT_W.even;
   const waveK=3+level%3;
-  /* 밀도는 실제 남은 공간에서 계산: 목표 간격이 레벨에 따라 411px→150px로 줄어든다 */
-  const sp=Math.max(150,420-level*9)*(R.lay==='rhythm'?0.8:1);
-  const groups=clamp(Math.round(freePx/sp),4,R.g+4);
+  /* 밀도는 실제 남은 공간에서 계산: 목표 간격이 레벨 1의 202px에서 30의 112px까지 줄어든다 */
+  const sp=Math.max(112,205-level*3.2)*(R.lay==='rhythm'?0.8:1);
+  const groups=clamp(Math.round(freePx/sp),6,R.g+12);
   activeMap.hazardGroups=groups;
-  const minGap=Math.max(120,sp*0.66);
+  const minGap=Math.max(102,sp*0.62);
   const chosen=[];
   for(let n=0;n<groups;n++){
     let total=0;
@@ -1641,7 +1641,7 @@ function drawTitle(){
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.6.0 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
+  cx.fillText('v0.6.1 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
