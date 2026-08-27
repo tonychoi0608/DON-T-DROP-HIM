@@ -718,7 +718,7 @@ let eyeOpen={active:false,t:0,next:99,penaltyCd:0,moved:false};
 let silentZone={active:false,t:0,index:-1,hitCd:0,pulseDone:false,frontMsg:'',backMsg:''}, silentVisited=[false,false];
 let headHitCnt=0, gripDropCnt=0, manualResetCnt=0, mission=null;
 let trash={x:activeMap.trashX,spilled:false};
-let taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false};
+let taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false,leaveAt:60,gone:false,driveT:0,warned:false};
 const REASON_KO = {release:'손을 스스로 놓아버림', slip:'무리하게 당겨 손이 미끄러짐',
   impact:'낙하 충격 유발', drag:'부장님을 바닥에 끌고 다님', cat:'고양이를 놀라게 함',
   bottle:'소주병을 걷어참', abandon:'부장님을 길에 방치함', mic:'고함으로 숙면을 방해함'};
@@ -874,7 +874,8 @@ function startLevel(level){
   silentZone={active:false,t:0,index:-1,hitCd:0,pulseDone:false,frontMsg:'',backMsg:''}; silentVisited=[false,false];
   headHitCnt=0; gripDropCnt=0; manualResetCnt=0;
   trash={x:activeMap.trashX,spilled:false};
-  taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false};
+  taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false,
+    leaveAt:Math.max(25,Math.round(levelCfg.par*(activeMap.taxiX0/activeMap.length)*0.78)),gone:false,driveT:0,warned:false};
   mission=MISSIONS[(Math.random()*MISSIONS.length)|0];
   resetBottles();
   catZone.x0=activeMap.catX-140; catZone.x1=activeMap.catX+140; catZone.catX=activeMap.catX;
@@ -1057,19 +1058,27 @@ function update(dt){
     }
   }
 
-  // 택시: 부장님을 표시 구역에 내려놓으면 800m를 건너뛴다
+  // 택시: 제한 시간 안에 도착해서 부장님을 내려놓으면 800m를 건너뛴다. 늦으면 떠난다.
   if(taxi.active&&!taxi.success&&!taxi.failed){
-    if(chest.x>taxi.x0-80&&chest.x<taxi.x1+80){
-      if(!taxi.entered){ taxi.entered=true; toast('🚕 뒷문에 조심히 내려놓으면 '+Math.round(activeMap.taxiSkip/10)+'m 단축!'); }
-      taxi.t+=dt;
-      const inside=chest.x>taxi.x0+35&&chest.x<taxi.x1-35&&pelvis.x>taxi.x0+20&&pelvis.x<taxi.x1-20;
-      if(inside&&!anyGrip&&(chest.onGround||pelvis.onGround)&&bossVel(chest)<95){
-        taxi.success=true; taxi.active=false; addRescue('team','택시 탑승 성공',400); sBell();
-        const dx=activeMap.taxiSkip; for(const c of carriers)c.x+=dx; for(const p of boss.list){p.x+=dx;p.px+=dx;}
-        toast('🚕 거리 -'+Math.round(dx/10)+'m! 기사님, 명진아파트로요');
-      } else if(taxi.t>12){ taxi.failed=true; taxi.active=false; toast('🚕 “손님, 그냥 내려주세요.”'); }
+    const remain=taxi.leaveAt-runTime;
+    if(remain<=0){
+      taxi.failed=true; taxi.active=false; taxi.gone=true;
+      toast('🚕 택시가 떠났다… 조금만 빨랐다면'); sSlip();
+    } else {
+      if(remain<=10&&!taxi.warned){ taxi.warned=true; toast('🚕 택시 출발 10초 전! 서두르세요'); }
+      if(chest.x>taxi.x0-80&&chest.x<taxi.x1+80){
+        if(!taxi.entered){ taxi.entered=true; toast('🚕 뒷문에 조심히 내려놓으면 '+Math.round(activeMap.taxiSkip/10)+'m 단축!'); }
+        taxi.t+=dt;
+        const inside=chest.x>taxi.x0+35&&chest.x<taxi.x1-35&&pelvis.x>taxi.x0+20&&pelvis.x<taxi.x1-20;
+        if(inside&&!anyGrip&&(chest.onGround||pelvis.onGround)&&bossVel(chest)<95){
+          taxi.success=true; taxi.active=false; addRescue('team','택시 탑승 성공',400); sBell();
+          const dx=activeMap.taxiSkip; for(const c of carriers)c.x+=dx; for(const p of boss.list){p.x+=dx;p.px+=dx;}
+          toast('🚕 거리 -'+Math.round(dx/10)+'m! 기사님, 명진아파트로요');
+        } else if(taxi.t>12){ taxi.failed=true; taxi.active=false; toast('🚕 “손님, 그냥 내려주세요.”'); }
+      }
     }
   }
+  if(taxi.gone) taxi.driveT+=dt;
 
   // 뒤척임 이벤트
   if(stirPending===null && runTime>nextStir){
@@ -1305,8 +1314,10 @@ function drawDecos(){
   cx.fillStyle='#6b4f35'; cx.fillRect(benchX,G_Y-34,110,10);
   cx.fillStyle='#54483c'; cx.fillRect(benchX+8,G_Y-24,10,24); cx.fillRect(benchX+92,G_Y-24,10,24);
   // 택시 대표 구간
-  if(!taxi.success){
-    cx.fillStyle=taxi.failed?'#55596a':'#e8bd34'; roundRect(taxi.x0,G_Y-108,taxi.x1-taxi.x0,100,22); cx.fill();
+  const taxiOff=taxi.gone?taxi.driveT*560:0;
+  if(!taxi.success&&taxiOff<2400){
+    cx.save(); cx.translate(taxiOff,0);
+    cx.fillStyle=(taxi.failed&&!taxi.gone)?'#55596a':'#e8bd34'; roundRect(taxi.x0,G_Y-108,taxi.x1-taxi.x0,100,22); cx.fill();
     cx.fillStyle='#24304e'; cx.fillRect(taxi.x0+52,G_Y-100,168,42);
     cx.fillStyle='#171c2d'; cx.beginPath(); cx.arc(taxi.x0+72,G_Y-8,25,0,7); cx.fill();
     cx.beginPath(); cx.arc(taxi.x1-70,G_Y-8,25,0,7); cx.fill();
@@ -1314,10 +1325,17 @@ function drawDecos(){
     cx.strokeRect(taxi.x0+178,G_Y-94,118,80); cx.lineWidth=1;
     cx.fillStyle='#17213a'; cx.font='bold 16px sans-serif'; cx.textAlign='center';
     cx.fillText('TAXI',taxi.x0+105,G_Y-65);
-    if(!taxi.failed){
+    if(taxi.gone){
+      cx.fillStyle='rgba(223,230,255,0.55)'; cx.font='bold 13px sans-serif';
+      for(let i=0;i<3;i++) cx.fillText('〰',taxi.x0-24-i*22,G_Y-30-i*6);
+    } else if(taxi.active&&!taxi.failed){
+      const remain=Math.max(0,taxi.leaveAt-runTime);
       cx.fillStyle='#ffe9b8'; cx.font='bold 14px sans-serif';
-      cx.fillText(taxi.entered?'뒷문에 내려놓으세요!':'“어디까지 가세요?”',(taxi.x0+taxi.x1)/2,G_Y-128);
+      cx.fillText(taxi.entered?'뒷문에 내려놓으세요!':'“어디까지 가세요?”',(taxi.x0+taxi.x1)/2,G_Y-146);
+      cx.fillStyle=remain<=10?'#ff6b6b':'#ffd45e'; cx.font='900 15px sans-serif';
+      cx.fillText('⏱ 출발까지 '+Math.ceil(remain)+'초',(taxi.x0+taxi.x1)/2,G_Y-124);
     }
+    cx.restore();
   }
   // 쓰레기봉투: 굴러온 병과 충돌하면 연쇄 사고
   cx.fillStyle=trash.spilled?'#4f5360':'#262b38';
