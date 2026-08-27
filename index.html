@@ -2,14 +2,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.5</title>
+<title>부장님이 잠드셨다 v0.5.1</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
   #wrap{position:fixed;inset:0;display:grid;place-items:center;background:#0b1026}
   canvas{width:min(100vw,calc(100vh*1.77778));max-height:100vh;display:block}
   #touchControls{position:fixed;inset:0;z-index:20;display:none;pointer-events:none;
-    touch-action:none;-webkit-user-select:none;user-select:none}
+    touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   body.touch #touchControls{display:block}
   .controlSide{position:absolute;bottom:max(8px,env(safe-area-inset-bottom));display:flex;
     align-items:flex-end;gap:8px;visibility:hidden;opacity:0;transition:opacity .15s}
@@ -85,7 +85,7 @@
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 모바일 대응 30레벨 캠페인 v0.5
+   부장님이 잠드셨다 — 모바일 멀티터치 수정 30레벨 캠페인 v0.5.1
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -112,33 +112,58 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>setInput(e.code,false));
 
-const virtualPointers=new Map(), virtualCounts={};
-function releaseVirtualPointer(pointerId){
-  const hit=virtualPointers.get(pointerId); if(!hit) return;
-  virtualPointers.delete(pointerId);
-  hit.btn.classList.remove('active');
+const virtualContacts=new Map(), virtualCounts={}, virtualButtonCounts=new Map();
+function beginVirtualContact(contactId,code,btn){
+  if(!code||virtualContacts.has(contactId)) return;
+  virtualContacts.set(contactId,{code,btn});
+  virtualCounts[code]=(virtualCounts[code]||0)+1;
+  virtualButtonCounts.set(btn,(virtualButtonCounts.get(btn)||0)+1);
+  btn.classList.add('active'); setInput(code,true);
+}
+function releaseVirtualContact(contactId){
+  const hit=virtualContacts.get(contactId); if(!hit) return;
+  virtualContacts.delete(contactId);
   virtualCounts[hit.code]=Math.max(0,(virtualCounts[hit.code]||1)-1);
+  const btnCount=Math.max(0,(virtualButtonCounts.get(hit.btn)||1)-1);
+  if(btnCount) virtualButtonCounts.set(hit.btn,btnCount);
+  else { virtualButtonCounts.delete(hit.btn); hit.btn.classList.remove('active'); }
   if(!virtualCounts[hit.code]) setInput(hit.code,false);
 }
 if(TOUCH_UI){
+  const nativeTouch=('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0;
   for(const btn of document.querySelectorAll('.touchBtn')){
+    btn.addEventListener('touchstart',e=>{
+      e.preventDefault();
+      const code=btn.dataset.code;
+      for(const touch of e.changedTouches) beginVirtualContact('t'+touch.identifier,code,btn);
+    },{passive:false});
     btn.addEventListener('pointerdown',e=>{
+      if(nativeTouch&&e.pointerType==='touch') return;
       const code=btn.dataset.code; if(!code) return;
       e.preventDefault();
       try{ btn.setPointerCapture(e.pointerId); }catch(_){}
-      virtualPointers.set(e.pointerId,{code,btn});
-      virtualCounts[code]=(virtualCounts[code]||0)+1;
-      btn.classList.add('active'); setInput(code,true);
+      beginVirtualContact('p'+e.pointerId,code,btn);
     });
-    btn.addEventListener('pointerup',e=>{ e.preventDefault(); releaseVirtualPointer(e.pointerId); });
-    btn.addEventListener('pointercancel',e=>releaseVirtualPointer(e.pointerId));
-    btn.addEventListener('lostpointercapture',e=>releaseVirtualPointer(e.pointerId));
+    btn.addEventListener('lostpointercapture',e=>releaseVirtualContact('p'+e.pointerId));
   }
+  window.addEventListener('touchend',e=>{
+    let handled=false;
+    for(const touch of e.changedTouches){
+      const id='t'+touch.identifier;
+      if(virtualContacts.has(id)){ handled=true; releaseVirtualContact(id); }
+    }
+    if(handled) e.preventDefault();
+  },{passive:false});
+  window.addEventListener('touchcancel',e=>{
+    for(const touch of e.changedTouches) releaseVirtualContact('t'+touch.identifier);
+  },{passive:false});
+  window.addEventListener('pointerup',e=>releaseVirtualContact('p'+e.pointerId));
+  window.addEventListener('pointercancel',e=>releaseVirtualContact('p'+e.pointerId));
   window.addEventListener('contextmenu',e=>e.preventDefault());
 }
 window.addEventListener('blur',()=>{
   for(const k in keys) keys[k]=false;
-  for(const pointerId of [...virtualPointers.keys()]) releaseVirtualPointer(pointerId);
+  for(const contactId of [...virtualContacts.keys()]) releaseVirtualContact(contactId);
   if(state==='play') state='pause';
   if(scrapeGain) scrapeGain.gain.value=0;
 });
@@ -188,7 +213,6 @@ async function toggleMic(){
   if(micEnabled){
     if(micStream) for(const tr of micStream.getTracks()) tr.stop();
     micStream=micSource=micAnalyser=micData=null; micEnabled=false; micStatus='OFF';
-    silentZone.active=false;
     toast('🎙 실제 마이크 OFF'); return;
   }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
@@ -471,7 +495,8 @@ class Carrier{
     const m=this.midTarget();
     const st=dist2(an.x,an.y,m.x,m.y);
     if(st>this.stretch) this.stretch=st;
-    const k=0.42;
+    const saving=friendSave&&friendSave.holder===this.side()&&friendSave.t<=3.2;
+    const k=saving?0.5:0.42;
     t[0].x+=(an.x-4-t[0].x)*k; t[0].y+=(an.y-t[0].y)*k;
     t[1].x+=(an.x+4-t[1].x)*k; t[1].y+=(an.y-t[1].y)*k;
   }
@@ -529,7 +554,8 @@ class Carrier{
     let gPressed=false;
     for(const gk of k.G){ if(pressed[gk]) gPressed=true; }
     const m=this.midTarget(), an=this.anchor();
-    const near=dist2(an.x,an.y,m.x,m.y)<64;
+    const rescueWindow=friendSave||nearMissArmed||bothLoose;
+    const near=dist2(an.x,an.y,m.x,m.y)<(rescueWindow?96:64);
     this.regrabHint = !this.grip && near;
     if(gPressed){
       if(this.grip){
@@ -539,7 +565,8 @@ class Carrier{
       else if(near){ this.grip=true; lastGripChange[this.side()]=runTime; onRegrip(this.side()); sChime(); }
     }
     // 과신전 슬립
-    if(this.grip && this.stretch>diff.grip){ this.slipT+=dt; if(this.slipT>diff.slip){
+    const saveGripBoost=friendSave&&friendSave.holder===this.side()&&friendSave.t<=3.2?1.35:1;
+    if(this.grip && this.stretch>diff.grip*saveGripBoost){ this.slipT+=dt; if(this.slipT>diff.slip){
       this.grip=false; this.slipT=0; lastGripChange[this.side()]=runTime; gripDropCnt++;
       addFault(this.side(),12,'slip'); sSlip();
       toast('⚠ '+this.label+' 손이 미끄러졌다!'); shake=8;
@@ -570,18 +597,25 @@ let clearT=-1, wakeAnimT=0, gradeInfo=null, toasts=[], particles=[], bossBubble=
 let titleT=0;
 let actionHistory={front:[],back:[]}, lastGripChange={front:-99,back:-99};
 let incident=null, incidentCd=0, incidentLog=[], clipScore=0;
+let gameEvents=[], nextGameEventId=1;
 let rescues={front:{score:0,counts:{}},back:{score:0,counts:{}}};
 let friendSave=null, bothLoose=false, bothLooseAt=-99, nearMissArmed=false, nearMissT=0;
+let soloHoldBest={front:0,back:0};
 let eyeOpen={active:false,t:0,next:99,penaltyCd:0,moved:false};
-let silentZone={active:false,t:0,index:-1,hitCd:0}, silentVisited=[false,false];
+let silentZone={active:false,t:0,index:-1,hitCd:0,pulseDone:false,frontMsg:'',backMsg:''}, silentVisited=[false,false];
 let headHitCnt=0, gripDropCnt=0, manualResetCnt=0, mission=null;
 let trash={x:2635,spilled:false};
 let taxi={x0:4920,x1:5280,active:true,entered:false,t:0,success:false,failed:false};
 const REASON_KO = {release:'손을 스스로 놓아버림', slip:'무리하게 당겨 손이 미끄러짐',
   impact:'낙하 충격 유발', drag:'부장님을 바닥에 끌고 다님', cat:'고양이를 놀라게 함',
   bottle:'소주병을 걷어참', abandon:'부장님을 길에 방치함', mic:'고함으로 숙면을 방해함'};
+const REASON_SHORT={release:'손놓음',slip:'과신전',impact:'충격',drag:'끌기',cat:'환경사고',bottle:'환경사고',abandon:'방치',mic:'소음'};
 const SLEEPTALK=['으음… 김대리… 그 보고서는…','한 잔만… 딱 한 잔만 더…','우리 팀은… 가족이야…','라떼는… 말이야…','으어… 2차… 2차 가야지…','…내가 다 책임진다니까…'];
 const WAKELINES=['야!! 여기가 어디야!!','김대리… 자네 지금 뭐 하는 건가…','내 구두!! 내 구두 어디 갔어!!','자네들, 내일 아침에 보자.','이게 지금 몇 시야!!'];
+const SILENT_EVENTS=[
+  {front:'⚠ 3초 뒤 크게 뒤척입니다',back:'⚠ 앞에 소주병 구간이 있습니다'},
+  {front:'⚠ 앞에 낮은 간판이 있습니다',back:'⚠ 3초 뒤 크게 뒤척입니다'}
+];
 const MISSIONS=[
   {id:'quiet',title:'쉿!',desc:'소음을 3회 이하로',short:'소음 ≤ 3'},
   {id:'head',title:'무사 귀환',desc:'머리를 바닥에 부딪히지 않기',short:'머리 충격 0'},
@@ -593,6 +627,11 @@ const MISSIONS=[
 function addFault(side,amt,reason){
   const f=faults[side]; f.total+=amt; f.reasons[reason]=(f.reasons[reason]||0)+amt;
   f.counts[reason]=(f.counts[reason]||0)+1;
+}
+function emitGameEvent(type,data){
+  const event={id:nextGameEventId++,type,at:runTime,...(data||{})};
+  gameEvents.push(event); if(gameEvents.length>120) gameEvents.shift();
+  return event;
 }
 function toast(txt){ toasts.push({txt,t:0}); if(toasts.length>3) toasts.shift(); }
 function spawnP(type,x,y,txt){ particles.push({type,x,y,vx:rnd(-30,30),vy:rnd(-70,-30),t:0,txt}); }
@@ -606,23 +645,29 @@ function recordActions(){
     while(a.length&&runTime-a[0].t>1.5) a.shift();
   }
 }
-function actionScore(side,p){
+function actionEvidence(side,p){
   const a=actionHistory[side], c=carriers.find(v=>v.side()===side);
   let speed=0, stretch=0;
   for(const v of a){ speed=Math.max(speed,Math.abs(v.vx)); stretch=Math.max(stretch,v.stretch); }
-  const recentRelease=runTime-lastGripChange[side]<1.5?34:0;
+  const released=runTime-lastGripChange[side]<1.5;
+  const recentRelease=released?34:0;
   const distance=c?clamp(180-dist2(c.x,c.y,p.x,p.y),0,180)/12:0;
-  return 18+speed/12+stretch/7+recentRelease+distance;
+  const reason=released?'release':stretch>diff.grip*0.82?'slip':'impact';
+  return {score:18+speed/12+stretch/7+recentRelease+distance,reason,speed,stretch};
 }
 function triggerIncident(p,spd,dmg){
-  if(incidentCd>0||dmg<3) return;
-  let fs=actionScore('front',p), bs=actionScore('back',p);
+  if(incidentCd>0||dmg<5) return;
+  const fe=actionEvidence('front',p), be=actionEvidence('back',p);
+  let fs=fe.score, bs=be.score;
   const frontBody=boss.headEnd.indexOf(p)>=0;
   if(frontBody) fs+=22; else bs+=22;
   let fp=clamp(Math.round(fs/(fs+bs)*100),8,92), bp=100-fp;
   const part=p===boss.pts.head?'머리':p===boss.pts.chest?'상체':frontBody?'팔·어깨':'하체';
-  incident={title:'부장님 '+part+' 충돌',fp,bp,t:0,dur:1.75,dmg}; incidentCd=1.25;
-  incidentLog.push({title:incident.title,fp,bp,dmg,at:runTime});
+  incident={title:'부장님 '+part+' 충돌',fp,bp,t:0,dur:1.9,dmg,
+    frontReason:REASON_SHORT[fe.reason],backReason:REASON_SHORT[be.reason]}; incidentCd=1.8;
+  const event=emitGameEvent('impact',{title:incident.title,fp,bp,dmg,
+    reasons:{front:fe.reason,back:be.reason},evidence:{front:fe,back:be}});
+  incidentLog.push(event);
   if(incidentLog.length>12) incidentLog.shift();
   slowT=0.42; timeScale=0.22; shake=Math.max(shake,12);
 }
@@ -631,6 +676,7 @@ function addRescue(side,name,score){
   if(side==='front'||side==='back'){
     const r=rescues[side]; r.score+=score; r.counts[name]=(r.counts[name]||0)+1;
   }
+  emitGameEvent(name==='간발의 차'?'near_save':name==='독박 운반'?'solo_hold':'rescue',{side,name,score});
   incident={title:name+'!  +'+score,fp:null,bp:null,t:0,dur:1.7,rescue:true};
   sChime(); for(let i=0;i<8;i++) spawnP('star',boss.pts.chest.x,boss.pts.chest.y-20);
 }
@@ -671,6 +717,22 @@ function onBossImpact(p,spd){
   }
 }
 function bossSay(txt,dur){ bossBubble={txt,t:0,dur:dur||2.2}; }
+function triggerBossFlail(source){
+  const chest=boss.pts.chest, pelvis=boss.pts.pelvis;
+  sGroan(); shake=9;
+  setVel(chest,rnd(-240,240),-rnd(180,300));
+  setVel(pelvis,rnd(-240,240),-rnd(120,260));
+  for(const p of [boss.pts.la,boss.pts.ra,boss.pts.lh,boss.pts.rh]) setVel(p,rnd(-320,320),-rnd(100,320));
+  bossSay('부스럭…!!',1.4);
+  emitGameEvent(source==='silent'?'silent_event':'stir',{phase:'flail'});
+}
+function beginSilentEvent(index){
+  const info=SILENT_EVENTS[index];
+  silentVisited[index]=true;
+  silentZone={active:true,t:8,index,hitCd:0,pulseDone:false,frontMsg:info.front,backMsg:info.back};
+  emitGameEvent('silent_event',{phase:'start',index,front:info.front,back:info.back});
+  toast('🤫 부장님이 선잠에 들었습니다 — 서로 다른 정보를 확인하세요');
+}
 
 function startGame(m){
   mode=m;
@@ -691,10 +753,12 @@ function startLevel(level){
   faults={front:{total:0,reasons:{},counts:{}}, back:{total:0,reasons:{},counts:{}}};
   actionHistory={front:[],back:[]}; lastGripChange={front:-99,back:-99};
   incident=null; incidentCd=0; incidentLog=[]; clipScore=0;
+  gameEvents=[]; nextGameEventId=1;
   rescues={front:{score:0,counts:{}},back:{score:0,counts:{}}};
   friendSave=null; bothLoose=false; bothLooseAt=-99; nearMissArmed=false; nearMissT=0;
+  soloHoldBest={front:0,back:0};
   eyeOpen={active:false,t:0,next:rnd(12,18),penaltyCd:0,moved:false};
-  silentZone={active:false,t:0,index:-1,hitCd:0}; silentVisited=[false,false];
+  silentZone={active:false,t:0,index:-1,hitCd:0,pulseDone:false,frontMsg:'',backMsg:''}; silentVisited=[false,false];
   headHitCnt=0; gripDropCnt=0; manualResetCnt=0;
   trash={x:2635,spilled:false}; taxi={x0:4920,x1:5280,active:true,entered:false,t:0,success:false,failed:false};
   mission=MISSIONS[(Math.random()*MISSIONS.length)|0];
@@ -752,6 +816,7 @@ function update(dt){
     const holder=carriers.find(c=>c.grip).side();
     if(!friendSave||friendSave.holder!==holder) friendSave={holder,t:0,soloAward:false};
     friendSave.t+=dt;
+    soloHoldBest[holder]=Math.max(soloHoldBest[holder],friendSave.t);
     if(friendSave.t>=2&&!friendSave.soloAward){ friendSave.soloAward=true; addRescue(holder,'독박 운반',200); }
   } else if(gripCount===2&&friendSave){
     if(friendSave.t<=3.2) addRescue(friendSave.holder,'팀워크 구조',250);
@@ -764,20 +829,23 @@ function update(dt){
   if(gripCount<2&&head.y>G_Y-45&&headVy>100){ nearMissArmed=true; nearMissT=0.65; }
 
   // 수면 단계: 반수면에서는 갑자기 눈을 뜨며, 입력하면 추가 피해
-  if(!eyeOpen.active&&meter<diff.eye&&runTime>eyeOpen.next){
+  if(!eyeOpen.active&&meter<=30&&runTime>eyeOpen.next){
     eyeOpen.active=true; eyeOpen.t=rnd(2.2,3); eyeOpen.moved=false; eyeOpen.penaltyCd=0;
+    emitGameEvent('wake_eye',{phase:'start',duration:eyeOpen.t});
     toast('👀 움직이지 마세요.'); bossSay('……',eyeOpen.t); sGroan();
   }
   if(eyeOpen.active){
     eyeOpen.t-=dt; eyeOpen.penaltyCd-=dt;
-    const moved=['KeyA','KeyD','KeyW','ArrowLeft','ArrowRight','ArrowUp'].some(k=>keys[k]);
+    const moved=['KeyA','KeyD','KeyW','KeyS','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].some(k=>keys[k]);
     if(moved&&eyeOpen.penaltyCd<=0){
+      if(!eyeOpen.moved) emitGameEvent('wake_eye',{phase:'caught'});
       eyeOpen.moved=true; eyeOpen.penaltyCd=0.32; meter-=3.5*diff.drain; sinceDmg=0;
       toast('👀 들켰습니다! 움직이지 마세요'); shake=4;
     }
     if(eyeOpen.t<=0){
       eyeOpen.active=false; eyeOpen.next=runTime+rnd(15,24)*diff.stir;
       if(!eyeOpen.moved) addRescue('team','눈치 만점',100);
+      emitGameEvent('wake_eye',{phase:eyeOpen.moved?'failed':'success'});
       bossSay('…zzz',1.4); sSnore();
     }
   }
@@ -791,11 +859,17 @@ function update(dt){
     addFault(side,dmg,'mic'); toast(silentZone.active?'🤫 조용히 하세요!':'🔊 너무 시끄럽습니다!'); shake=5;
   }
   const silentXs=[3260,5750];
-  for(let i=0;i<silentXs.length;i++) if(micEnabled&&!silentVisited[i]&&chest.x>silentXs[i]){
-    silentVisited[i]=true; silentZone={active:true,t:8,index:i,hitCd:0};
-    toast('🤫 부장님이 선잠에 들었습니다 — 8초간 조용히!');
+  for(let i=0;i<silentXs.length;i++) if(!silentZone.active&&!silentVisited[i]&&chest.x>silentXs[i]) beginSilentEvent(i);
+  if(silentZone.active){
+    silentZone.t-=dt;
+    if(!silentZone.pulseDone&&silentZone.t<=5){
+      silentZone.pulseDone=true; triggerBossFlail('silent'); toast('부장님이 크게 뒤척였다!');
+    }
+    if(silentZone.t<=0){
+      const index=silentZone.index; silentZone.active=false;
+      emitGameEvent('silent_event',{phase:'success',index}); addRescue('team','무음 통과',150);
+    }
   }
-  if(silentZone.active){ silentZone.t-=dt; if(silentZone.t<=0){silentZone.active=false;addRescue('team','무음 통과',150);} }
 
   // 끌기(드래그) 판정
   const touching = chest.onGround||pelvis.onGround||head.onGround;
@@ -827,6 +901,7 @@ function update(dt){
         catZone.spooked=true; catZone.runX=catZone.catX;
         sMeow(); meter-=8*diff.drain; noiseCnt++; sinceDmg=0;
         addFault(c.side(),8,'cat'); shake=7;
+        emitGameEvent('cat',{side:c.side(),reason:'cat'});
         toast('🐈 고양이가 기겁했다!! ('+c.label+' 과실)');
         bossSay('…읏, 시끄러…',1.6);
       }
@@ -840,6 +915,7 @@ function update(dt){
         if(Math.abs(c.x+c.w/2-b.x)<20 && Math.abs(c.vx)>90 && c.grounded){
           b.k=true; b.vx=c.vx*1.8; sKick(); meter-=4*diff.drain; noiseCnt++; sinceDmg=0;
           addFault(c.side(),4,'bottle'); spawnP('text',b.x,G_Y-40,'데구르르!');
+          emitGameEvent('bottle',{side:c.side(),reason:'bottle',phase:'kick'});
         }
       }
     } else if(!b.done){
@@ -847,6 +923,7 @@ function update(dt){
       if(Math.abs(b.vx)<8) b.done=true;
       if(!trash.spilled&&Math.abs(b.x-trash.x)<25){
         trash.spilled=true; b.done=true; sKick(); noiseCnt++; meter-=7*diff.drain;
+        emitGameEvent('bottle',{phase:'chain'});
         toast('🗑 쓰레기봉투 → 고양이 → 택시 경적!'); shake=8;
         if(!catZone.spooked){ catZone.spooked=true; catZone.runX=catZone.catX; sMeow(); }
         setVel(chest,rnd(-180,180),-220); bossSay('으음… 시끄러…',1.8);
@@ -887,11 +964,7 @@ function update(dt){
     stirWarnT-=dt;
     if(stirWarnT<=0){
       if(stirPending==='flail'){
-        sGroan(); shake=9;
-        setVel(chest,rnd(-240,240),-rnd(180,300));
-        setVel(pelvis,rnd(-240,240),-rnd(120,260));
-        for(const p of [boss.pts.la,boss.pts.ra,boss.pts.lh,boss.pts.rh]) setVel(p,rnd(-320,320),-rnd(100,320));
-        bossSay('부스럭…!!',1.4);
+        triggerBossFlail('normal');
         toast('부장님이 크게 뒤척였다!');
       } else {
         sSnore(); bossSay(SLEEPTALK[(Math.random()*SLEEPTALK.length)|0],2.6);
@@ -1307,6 +1380,13 @@ function drawParticles(){
     cx.globalAlpha=1;
   }
 }
+function drawSilentInfo(x,y,w,label,msg,color){
+  cx.fillStyle='rgba(10,14,34,0.94)'; roundRect(x,y,w,72,12); cx.fill();
+  cx.strokeStyle=color; cx.lineWidth=2; cx.stroke(); cx.lineWidth=1;
+  cx.textAlign='center'; cx.fillStyle=color; cx.font='900 14px sans-serif';
+  cx.fillText(label,x+w/2,y+24);
+  cx.fillStyle='#fff'; cx.font='bold 16px sans-serif'; cx.fillText(msg,x+w/2,y+52);
+}
 function drawHUD(){
   // 숙면 게이지
   const mw=280, mx=24, my=22;
@@ -1360,18 +1440,22 @@ function drawHUD(){
     cx.font='bold 26px sans-serif'; cx.fillStyle='#ffd45e'; cx.textAlign='center';
     cx.fillText('⚠ 부장님이 뒤척인다…!',VW/2,170);
   }
+  let alertY=silentZone.active?278:205;
   if(eyeOpen.active){
     cx.fillStyle='rgba(255,220,120,0.14)'; cx.fillRect(0,0,VW,VH);
     cx.font='900 34px sans-serif'; cx.fillStyle='#ffe27d'; cx.textAlign='center';
-    cx.fillText('👀 움직이지 마세요  '+eyeOpen.t.toFixed(1),VW/2,205);
+    cx.fillText('👀 움직이지 마세요  '+eyeOpen.t.toFixed(1),VW/2,alertY);
+    alertY+=38;
   }
   if(friendSave){
     cx.font='900 27px sans-serif'; cx.fillStyle='#7dffa8'; cx.textAlign='center';
-    cx.fillText('혼자 버티는 중!  '+Math.max(0,3-friendSave.t).toFixed(1),VW/2,205);
+    cx.fillText('혼자 버티는 중!  '+Math.max(0,3.2-friendSave.t).toFixed(1),VW/2,alertY);
   }
   if(silentZone.active){
-    cx.font='900 25px sans-serif'; cx.fillStyle='#b7c8ff'; cx.textAlign='center';
-    cx.fillText('🤫 SILENT ZONE  '+Math.ceil(silentZone.t)+'초',VW/2,245);
+    drawSilentInfo(38,126,420,'🟦 뒷사람 정보',silentZone.backMsg,'#7faaff');
+    drawSilentInfo(VW-458,126,420,'🟩 앞사람 정보',silentZone.frontMsg,'#7ddec7');
+    cx.font='900 22px sans-serif'; cx.fillStyle='#ffe27d'; cx.textAlign='center';
+    cx.fillText('🤫 선잠 · 말 대신 신호로  '+Math.ceil(silentZone.t)+'초',VW/2,230);
   }
   cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(VW-230,VH-92,206,34,10); cx.fill();
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4'; cx.font='bold 13px sans-serif'; cx.textAlign='left';
@@ -1387,7 +1471,7 @@ function drawIncident(dt){
   cx.globalAlpha=a;
   const y=incident.rescue?250:220;
   cx.fillStyle=incident.rescue?'rgba(20,70,60,0.92)':'rgba(65,12,20,0.94)';
-  roundRect(VW/2-270,y-56,540,incident.rescue?106:150,16); cx.fill();
+  roundRect(VW/2-270,y-56,540,incident.rescue?106:170,16); cx.fill();
   cx.strokeStyle=incident.rescue?'#7dffa8':'#ff7676'; cx.lineWidth=3; cx.stroke(); cx.lineWidth=1;
   cx.textAlign='center'; cx.font='900 29px sans-serif'; cx.fillStyle=incident.rescue?'#baffcd':'#ff8c8c';
   cx.fillText(incident.rescue?'🛟 '+incident.title:'⚠ 사고 발생 · '+incident.title,VW/2,y-17);
@@ -1396,6 +1480,8 @@ function drawIncident(dt){
     cx.fillText('뒷사람 '+incident.bp+'%  :  '+incident.fp+'% 앞사람',VW/2,y+22);
     cx.font='13px sans-serif'; cx.fillStyle='#ffd9a0';
     cx.fillText('최근 1.5초 이동·당김·그립·거리·충돌 부위로 판정',VW/2,y+52);
+    cx.fillStyle='#ffb7b7';
+    cx.fillText('사유 · 뒷사람 '+incident.backReason+' / 앞사람 '+incident.frontReason,VW/2,y+78);
   }
   cx.globalAlpha=1;
   if(incident.t>=incident.dur) incident=null;
@@ -1435,7 +1521,7 @@ function drawTitle(){
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.5 — PC 키보드와 모바일 멀티터치를 지원하는 30레벨 캠페인',VW/2,646);
+  cx.fillText('v0.5.1 — 손가락별 멀티터치를 지원하는 PC·모바일 30레벨 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
@@ -1523,8 +1609,10 @@ function drawClear(dt){
     const rescueScore=rescue==='team'?clipScore:rescues[rescue].score;
     cx.font='bold 18px sans-serif'; cx.fillStyle='#baffcd'; cx.fillText('구조 점수 '+rescueScore,894,234);
     cx.textAlign='left'; cx.font='14px sans-serif'; cx.fillStyle='#ccebdd';
-    const rc=rescue==='team'?[]:Object.entries(rescues[rescue].counts).slice(0,3);
-    (rc.length?rc.map(([k,n])=>k+' ×'+n):['함께 만든 기적']).forEach((l,i)=>cx.fillText('• '+l,758,272+i*27));
+    const rc=rescue==='team'?[]:Object.entries(rescues[rescue].counts).sort((a,b)=>b[1]-a[1]);
+    const rescueLines=rc.length?rc.map(([k,n])=>k+' ×'+n):['함께 만든 기적'];
+    if(rescue!=='team'&&soloHoldBest[rescue]>0.2) rescueLines.unshift('최장 단독 운반 '+soloHoldBest[rescue].toFixed(1)+'초');
+    rescueLines.slice(0,3).forEach((l,i)=>cx.fillText('• '+l,758,272+i*27));
     // 기록과 미션
     const mm=Math.floor(runTime/60),ss=Math.floor(runTime%60);
     cx.fillStyle='rgba(29,37,76,0.9)'; roundRect(150,398,930,164,14); cx.fill();
