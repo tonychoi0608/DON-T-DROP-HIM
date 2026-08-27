@@ -1361,7 +1361,7 @@ function drawDecos(){
     cx.fillStyle='rgba(125,255,168,'+(0.06+0.04*Math.sin(titleT*3))+')';
     cx.fillRect(GOAL_X0,G_Y-180,GOAL_X1-GOAL_X0,180);
     cx.fillStyle='#7dffa8'; cx.font='bold 15px sans-serif';
-    cx.fillText(TOUCH_UI?'▼ 여기 내려놓기 (양쪽 그립 해제)':'▼ 여기 내려놓기 (그립 F / Shift 해제)',(GOAL_X0+GOAL_X1)/2,G_Y-190);
+    cx.fillText(TOUCH_UI?'▼ 여기 내려놓기 (양쪽 그립 해제)':'▼ 여기 내려놓기 (그립 F / Shift·L 해제)',(GOAL_X0+GOAL_X1)/2,G_Y-190);
   }
 }
 function capsule(a,b,w,col){
@@ -1465,7 +1465,7 @@ function drawCarrier(c){
   // 리그랩 힌트
   if(c.regrabHint){
     cx.font='bold 13px sans-serif'; cx.fillStyle='#7dffa8'; cx.textAlign='center';
-    cx.fillText(TOUCH_UI?'[그립] 다시 잡기':c.role==='front'?'[Shift] 다시 잡기':'[F] 다시 잡기',cxm,y-14);
+    cx.fillText(TOUCH_UI?'[그립] 다시 잡기':c.role==='front'?'[Shift/L] 다시 잡기':'[F] 다시 잡기',cxm,y-14);
     cx.strokeStyle='rgba(125,255,168,0.6)';
     cx.beginPath(); cx.arc(an.x,an.y,10+3*Math.sin(titleT*6),0,7); cx.stroke();
   }
@@ -1476,7 +1476,7 @@ function drawCarrier(c){
   // 초반 조작 힌트
   if(c.x<860 && state==='play'){
     cx.fillStyle='rgba(223,230,255,0.75)'; cx.font='12px sans-serif';
-    const txt = TOUCH_UI?'◀▶ 이동 · ▲ 점프 · ▼ 숙이기 · 그립':c.role==='front'?'←→ 이동 · ↑ 점프 · ↓ 숙이기 · Shift 그립':'A D 이동 · W 점프 · S 숙이기 · F 그립';
+    const txt = TOUCH_UI?'◀▶ 이동 · ▲ 점프 · ▼ 숙이기 · 그립':c.role==='front'?'←→ 이동 · ↑ 점프 · ↓ 숙이기 · Shift/L 그립':'A D 이동 · W 점프 · S 숙이기 · F 그립';
     cx.fillText(txt,cxm,y+h+18);
   }
 }
@@ -1612,7 +1612,7 @@ function drawGripChip(c,x,y){
   cx.fillStyle=on?'#3ec9a7':'#ff6b6b';
   cx.beginPath(); cx.arc(x+18,y+17,7,0,7); cx.fill();
   cx.fillStyle='#dfe6ff'; cx.font='bold 13px sans-serif'; cx.textAlign='left';
-  const key=TOUCH_UI?'그립':c.role==='front'?'Shift':'F';
+  const key=TOUCH_UI?'그립':c.role==='front'?'Shift/L':'F';
   cx.fillText(c.label+' ['+key+'] '+(on?'잡는 중':'놓음!'),x+34,y+22);
 }
 function drawTitle(){
@@ -1626,7 +1626,7 @@ function drawTitle(){
   cx.fillStyle='#e2564b'; cx.font='900 25px sans-serif'; cx.fillText('회식엔딩',0,9); cx.restore();
   cx.fillStyle='#aeb9e6'; cx.font='500 21px sans-serif';
   cx.fillText('30개 전부 다른 맵. 지형·배치·이벤트 위치까지 전부 다릅니다.',VW/2,236);
-  drawBtn(VW/2-330,300,300,86,TOUCH_UI?'👆 혼자 터치 플레이':'[1]  혼자 연습',TOUCH_UI?'양쪽 엄지로 두 사람을 동시에 조작':'왼손=뒷사람(WASD+F) · 오른손=앞사람(방향키+Shift)', keys._h1);
+  drawBtn(VW/2-330,300,300,86,TOUCH_UI?'👆 혼자 터치 플레이':'[1]  혼자 연습',TOUCH_UI?'양쪽 엄지로 두 사람을 동시에 조작':'왼손=뒷사람(WASD+F) · 오른손=앞사람(방향키+Shift 또는 L)', keys._h1);
   drawBtn(VW/2+30,300,300,86,TOUCH_UI?'👆 2인 터치 협동':'[2]  둘이서 협동',TOUCH_UI?'화면 양쪽을 한 사람씩 맡아 조작':'키보드 반씩 나눠 잡기 · 서로 탓할 준비 필수', keys._h2);
   // 조작표
   cx.fillStyle='rgba(20,25,52,0.9)'; roundRect(VW/2-420,430,840,180,14); cx.fill();
@@ -1637,7 +1637,7 @@ function drawTitle(){
   cx.fillText(TOUCH_UI?'왼쪽 파란 패드     ◀▶ 이동     ▲ 점프     ▼ 숙이기     그립 잡기·놓기':'A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
   cx.fillStyle='#3ec9a7'; cx.font='bold 17px sans-serif'; cx.fillText('🟩 앞사람',VW/2-380,540);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText(TOUCH_UI?'오른쪽 초록 패드   ◀▶ 이동     ▲ 점프     ▼ 숙이기     그립 잡기·놓기':'← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 그립 잡기·놓기',VW/2-380,570);
+  cx.fillText(TOUCH_UI?'오른쪽 초록 패드   ◀▶ 이동     ▲ 점프     ▼ 숙이기     그립 잡기·놓기':'← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 또는 L 그립 잡기·놓기',VW/2-380,570);
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
