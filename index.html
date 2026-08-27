@@ -875,7 +875,7 @@ function startLevel(level){
   headHitCnt=0; gripDropCnt=0; manualResetCnt=0;
   trash={x:activeMap.trashX,spilled:false};
   taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false,
-    leaveAt:Math.max(25,Math.round(levelCfg.par*(activeMap.taxiX0/activeMap.length)*0.78)),gone:false,driveT:0,warned:false};
+    leaveAt:15,gone:false,driveT:0,warned:false};
   mission=MISSIONS[(Math.random()*MISSIONS.length)|0];
   resetBottles();
   catZone.x0=activeMap.catX-140; catZone.x1=activeMap.catX+140; catZone.catX=activeMap.catX;
@@ -1065,7 +1065,7 @@ function update(dt){
       taxi.failed=true; taxi.active=false; taxi.gone=true;
       toast('🚕 택시가 떠났다… 조금만 빨랐다면'); sSlip();
     } else {
-      if(remain<=10&&!taxi.warned){ taxi.warned=true; toast('🚕 택시 출발 10초 전! 서두르세요'); }
+      if(remain<=5&&!taxi.warned){ taxi.warned=true; toast('🚕 택시 출발 5초 전! 서두르세요'); }
       if(chest.x>taxi.x0-80&&chest.x<taxi.x1+80){
         if(!taxi.entered){ taxi.entered=true; toast('🚕 뒷문에 조심히 내려놓으면 '+Math.round(activeMap.taxiSkip/10)+'m 단축!'); }
         taxi.t+=dt;
