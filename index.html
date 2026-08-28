@@ -91,6 +91,9 @@
   .pRow{padding:7px 10px;background:#0c1128;border-radius:8px;margin:0 0 6px;font-weight:700}
   .pRow.dim{color:#8b96c4;font-weight:500}
   #lobbyMsg{min-height:20px;margin:8px 0 0;font-size:13px;color:#9fe8b6}
+  #dropModal{position:fixed;inset:0;z-index:45;display:none;align-items:center;justify-content:center;
+    background:rgba(5,8,20,.82);backdrop-filter:blur(3px)}
+  #dropModal .dropCard{width:min(400px,92vw)}
   #roomList{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 8px}
   .roomRow{display:flex;align-items:center;gap:8px;margin:0;padding:6px 10px;min-height:24px}
   .roomRow .rn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
@@ -150,6 +153,15 @@
     </div>
     <div id="lobbyMsg"></div>
     <button id="btnLeave" class="lbtn ghost">닫기 / 나가기</button>
+  </div>
+</div>
+<div id="dropModal">
+  <div id="lobbyCard" class="dropCard">
+    <h2>⚠ 상대방이 이탈했습니다</h2>
+    <p id="dropDesc" style="margin:0 0 14px;color:#aeb9e6">진행 상황은 그대로 남아 있습니다. 어떻게 할까요?</p>
+    <button id="dropSolo" class="lbtn main">🕹 혼자 이어하기 (양쪽 조작)</button>
+    <button id="dropWait" class="lbtn" style="width:100%;margin-top:8px">👥 새 상대 기다리기 (방 다시 공개)</button>
+    <button id="dropTitle" class="lbtn ghost">⌂ 타이틀로</button>
   </div>
 </div>
 <script>
@@ -2057,7 +2069,7 @@ function netConnect(code,roomName){
     lobbyEl('codeShow').textContent=roomName||''; lobbyMsg('접속됨 · 상대를 기다리는 중'); };
   ws.onmessage=netMsg;
   ws.onclose=()=>{ net.ws=null;
-    if(net.on){ toast('🔌 연결이 끊어졌습니다'); netLeave(); }
+    if(net.on){ onPeerGone('conn'); }
     else if(lobbyEl('lobby').style.display==='flex'){ lobbyEl('lobbySetup').style.display='block';
       lobbyEl('lobbyRoom').style.display='none'; lobbyMsg('연결이 끊어졌습니다',1); refreshRooms(); } };
   ws.onerror=()=>lobbyMsg('접속 실패 — 서버 주소와 방 코드를 확인하세요',1);
@@ -2066,7 +2078,7 @@ function netDisconnect(){
   if(net.ws){ const w=net.ws; net.ws=null; try{ w.onclose=null; w.close(); }catch(_){} }
   net.on=false; net.host=false; net.role=null; net.peerHere=false; net.snap=null;
 }
-function netLeave(){ netDisconnect(); state='title'; closeLobby(); }
+function netLeave(){ netDisconnect(); state='title'; closeLobby(); const dm=document.getElementById('dropModal'); if(dm) dm.style.display='none'; }
 function netSend(o){ if(net.ws&&net.ws.readyState===1){ try{ net.ws.send(JSON.stringify(o)); }catch(_){}} }
 function netSendInput(code,down){ netSend({t:'relay',i:[code,down?1:0]}); }
 function netMsg(e){
@@ -2079,7 +2091,7 @@ function netMsg(e){
   } else if(d.t==='start'){
     closeLobby(); netBegin(d.level||1,d.mi|0);
   } else if(d.t==='peer_left'){
-    if(net.on){ toast('👋 상대가 나갔습니다'); netLeave(); }
+    if(net.on) onPeerGone('peer');
     else lobbyMsg('상대가 나갔습니다 — 대기 중…',1);
   } else if(d.t==='relay'){
     if(d.i){ if(net.host&&net.on){ net._inj=true; setInput(d.i[0],!!d.i[1]); net._inj=false; } }
@@ -2107,6 +2119,7 @@ function renderLobby(d){
   if(!net.host) lobbyMsg(net.peerHere?(ready?'방장이 시작하길 기다리는 중…':'역할을 선택하세요'):'대기 중…');
 }
 function netBegin(level,mi){
+  hideDropModal();
   net.on=true; net.sendT=0; net.snap=null;
   net.myCodes=new Set(NET_CODES[net.role]||[]);
   net.peerCodes=new Set(NET_CODES[net.role==='front'?'back':'front']||[]);
@@ -2157,6 +2170,37 @@ function netApplySnap(rdt){
   } else if(s.sz<0&&silentZone.active) silentZone.active=false;
   if(silentZone.active) silentZone.t+=rdt;
 }
+/* 상대 이탈/연결 끊김: 진행을 멈추고 남은 사람에게 선택지를 준다 */
+function onPeerGone(why){
+  net.on=false;              // 스냅샷·입력 중계 중단, 로컬 키 차단 해제
+  net.host=true;             // 서버가 남은 쪽을 방장으로 승격
+  net.snap=null;
+  if(state==='play') state='pause';
+  toast(why==='conn'?'🔌 서버와 연결이 끊어졌습니다':'👋 상대방이 게임을 이탈했습니다');
+  lobbyEl('dropDesc').textContent=why==='conn'
+    ?'서버와의 연결이 끊어졌습니다. 진행 상황은 그대로 남아 있습니다.'
+    :'진행 상황은 그대로 남아 있습니다. 어떻게 할까요?';
+  lobbyEl('dropWait').style.display=(why==='conn'||!net.ws)?'none':'block';
+  lobbyEl('dropModal').style.display='flex';
+}
+function hideDropModal(){ lobbyEl('dropModal').style.display='none'; }
+lobbyEl('dropSolo').onclick=()=>{
+  hideDropModal(); netDisconnect();
+  // 이어받기 보정: 이벤트 타이머를 현재 시각 기준으로 재설정
+  nextStir=runTime+rnd(10,18)*diff.stir;
+  eyeOpen.active=false; eyeOpen.next=runTime+rnd(12,18);
+  toast('🕹 혼자 이어하기 — 왼손 뒷사람(WASD+F), 오른손 앞사람(방향키+Shift/L)');
+  state='play';
+};
+lobbyEl('dropWait').onclick=()=>{
+  hideDropModal();
+  netSend({t:'reopen'});
+  lobbyEl('lobby').style.display='flex';
+  lobbyEl('lobbySetup').style.display='none';
+  lobbyEl('lobbyRoom').style.display='block';
+  lobbyMsg('방이 다시 공개되었습니다 — 새 상대를 기다리는 중 (시작하면 LEVEL '+currentLevel+'부터)');
+};
+lobbyEl('dropTitle').onclick=()=>{ hideDropModal(); netLeave(); };
 function netTick(rdt){
   const btn=document.getElementById('onlineBtn');
   const show=state==='title'&&!net.on;
@@ -2181,7 +2225,7 @@ lobbyEl('roomName').addEventListener('keydown',e=>{ if(e.key==='Enter') netCreat
 lobbyEl('wsUrl').addEventListener('keydown',e=>e.stopPropagation());
 lobbyEl('roleBack').onclick=()=>netSend({t:'role',role:'back'});
 lobbyEl('roleFront').onclick=()=>netSend({t:'role',role:'front'});
-lobbyEl('btnStart').onclick=()=>netSend({t:'start',level:1,mi:(Math.random()*MISSIONS.length)|0});
+lobbyEl('btnStart').onclick=()=>netSend({t:'start',level:state==='title'?1:currentLevel,mi:(Math.random()*MISSIONS.length)|0});
 lobbyEl('btnLeave').onclick=()=>{ netDisconnect(); closeLobby();
   lobbyEl('lobbySetup').style.display='block'; lobbyEl('lobbyRoom').style.display='none'; lobbyMsg(''); };
 lobbyEl('lobby').addEventListener('click',e=>{ if(e.target===lobbyEl('lobby')){} });

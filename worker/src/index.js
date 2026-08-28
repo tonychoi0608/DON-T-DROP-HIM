@@ -91,6 +91,13 @@ export class RoomDO {
         this.bcast({ t: 'start', level: d.level || 1, mi: d.mi | 0 });
         await this.report();
       }
+    } else if (d.t === 'reopen') {
+      // 게임 중 상대가 이탈한 뒤, 남은 방장이 방을 다시 공개
+      if (a.host) {
+        await this.ctx.storage.delete('started');
+        await this.roster();
+        await this.report();
+      }
     } else if (d.t === 'relay') {
       for (const w of this.ctx.getWebSockets())
         if (w !== ws) { try { w.send(msg); } catch (_) {} }
