@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.7.0</title>
+<title>DON’T DROP HIM v0.7.0</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -66,7 +66,7 @@
     .touchBtn{width:42px;height:42px;border-radius:12px;font-size:17px}.gripBtn{width:52px;height:52px;font-size:11px}
   }
 
-  /* ---- 온라인 협동 로비 ---- */
+  /* ---- 온라인 협 로비 ---- */
   #lobby{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
     background:rgba(5,8,20,.78);backdrop-filter:blur(3px)}
   #lobbyCard{width:min(940px,96vw);max-height:92vh;overflow:auto;background:#141a36;border:1px solid #39415c;
@@ -105,23 +105,23 @@
   @media (max-width:560px){ #roomList{grid-template-columns:1fr} }
 </style>
 <div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
-<div id="touchControls" aria-label="모바일 게임 조작부">
-  <div id="rotateHint">📱 가로로 돌리면 더 편하게 플레이할 수 있습니다</div>
+<div id="touchControls" aria-label="Mobile controls">
+  <div id="rotateHint">📱 Rotate to landscape for a better view</div>
   <div class="controlSide back">
-    <span class="sideLabel">🟦 뒷사람</span>
-    <div class="stick" aria-label="뒷사람 스틱: 밀어서 이동, 위로 점프, 아래로 숙이기">
+    <span class="sideLabel">🟦 Back</span>
+    <div class="stick" aria-label="Back stick: push to move, up to jump, down to crouch">
       <span class="sa saL">◀</span><span class="sa saR">▶</span><span class="sa saU">▲</span><span class="sa saD">▼</span>
       <div class="stickKnob"></div>
     </div>
-    <button class="touchBtn gripBtn" data-code="KeyF" aria-label="뒷사람 그립">그립</button>
+    <button class="touchBtn gripBtn" data-code="KeyF" aria-label="Back grip">GRIP</button>
   </div>
   <div class="controlSide front">
-    <span class="sideLabel">🟩 앞사람</span>
-    <div class="stick" aria-label="앞사람 스틱: 밀어서 이동, 위로 점프, 아래로 숙이기">
+    <span class="sideLabel">🟩 Front</span>
+    <div class="stick" aria-label="Front stick: push to move, up to jump, down to crouch">
       <span class="sa saL">◀</span><span class="sa saR">▶</span><span class="sa saU">▲</span><span class="sa saD">▼</span>
       <div class="stickKnob"></div>
     </div>
-    <button class="touchBtn gripBtn" data-code="KeyL" aria-label="앞사람 그립">그립</button>
+    <button class="touchBtn gripBtn" data-code="KeyL" aria-label="Front grip">GRIP</button>
   </div>
   <div id="touchMenu">
     <button class="touchBtn" data-menu-index="0"></button>
@@ -131,38 +131,38 @@
 </div>
 <div id="lobby">
   <div id="lobbyCard">
-    <h2>🌐 온라인 협동</h2>
+    <h2>🌐 Online Co-op</h2>
     <div id="lobbySetup">
-      <label>중계 서버 주소 (Cloudflare Worker)</label>
-      <input id="wsUrl" placeholder="wss://dont-drop-him-online.계정명.workers.dev" autocomplete="off" spellcheck="false">
-      <div class="lrow"><input id="roomName" placeholder="방 이름 (예: 부장님 구조대)" maxlength="20" autocomplete="off"><button id="btnMake" class="lbtn" style="flex:0 0 auto">방 만들기</button></div>
-      <label>열린 방 목록 <span id="roomListState" style="color:#8b96c4"></span></label>
+      <label>Relay server address (Cloudflare Worker)</label>
+      <input id="wsUrl" placeholder="wss://dont-drop-him-online.youraccount.workers.dev" autocomplete="off" spellcheck="false">
+      <div class="lrow"><input id="roomName" placeholder="Room name (e.g. Boss Rescue Squad)" maxlength="20" autocomplete="off"><button id="btnMake" class="lbtn" style="flex:0 0 auto">Create room</button></div>
+      <label>Open rooms <span id="roomListState" style="color:#8b96c4"></span></label>
       <div id="roomList"></div>
       <div id="roomPager"></div>
     </div>
     <div id="lobbyRoom" style="display:none">
       <div id="codeShow"></div>
       <div id="playersBox"></div>
-      <div class="lrow"><button id="roleBack" class="lbtn">🟦 뒷사람</button><button id="roleFront" class="lbtn">🟩 앞사람</button></div>
-      <button id="btnStart" class="lbtn main" disabled>게임 시작</button>
+      <div class="lrow"><button id="roleBack" class="lbtn">🟦 Back</button><button id="roleFront" class="lbtn">🟩 Front</button></div>
+      <button id="btnStart" class="lbtn main" disabled>Start game</button>
     </div>
     <div id="lobbyMsg"></div>
-    <button id="btnLeave" class="lbtn ghost">닫기 / 나가기</button>
+    <button id="btnLeave" class="lbtn ghost">Close / Leave</button>
   </div>
 </div>
 <div id="dropModal">
   <div id="lobbyCard" class="dropCard">
-    <h2>⚠ 상대방이 이탈했습니다</h2>
-    <p id="dropDesc" style="margin:0 0 14px;color:#aeb9e6">진행 상황은 그대로 남아 있습니다. 어떻게 할까요?</p>
-    <button id="dropSolo" class="lbtn main">🕹 혼자 이어하기 (양쪽 조작)</button>
-    <button id="dropWait" class="lbtn" style="width:100%;margin-top:8px">👥 새 상대 기다리기 (방 다시 공개)</button>
-    <button id="dropTitle" class="lbtn ghost">⌂ 타이틀로</button>
+    <h2>⚠ Your partner left</h2>
+    <p id="dropDesc" style="margin:0 0 14px;color:#aeb9e6">Your progress is intact. What now?</p>
+    <button id="dropSolo" class="lbtn main">🕹 Continue solo (both roles)</button>
+    <button id="dropWait" class="lbtn" style="width:100%;margin-top:8px">👥 Wait for a new partner (relist room)</button>
+    <button id="dropTitle" class="lbtn ghost">⌂ Back to title</button>
   </div>
 </div>
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.7.0
+   DON’T DROP HIM — 30 unique map campaign v0.7.0
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -245,7 +245,7 @@ if(TOUCH_UI){
   window.addEventListener('pointercancel',e=>releaseVirtualContact('p'+e.pointerId));
   window.addEventListener('contextmenu',e=>e.preventDefault());
 }
-/* ---------------- 조그다이얼 가상 스틱: 한 손가락으로 이동·점프·숙이기 ---------------- */
+/* ---------------- 조그다이얼 가상 스틱: 한 손가락으로 이·점프·숙이기 ---------------- */
 const stickResets=[];
 if(TOUCH_UI){
   const nativeTouch=('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0;
@@ -299,7 +299,7 @@ window.addEventListener('blur',()=>{
   for(const contactId of [...virtualContacts.keys()]) releaseVirtualContact(contactId);
   for(const r of stickResets) r();
   if(state==='play') state='pause';
-  if(net.on&&net.host) netSend(netSnapshot()); // 게스트에게 일시정지 즉시 전파
+  if(net.on&&net.host) netSend(netSnapshot()); // 게스트에게 PAUSED 즉시 전파
   if(scrapeGain) scrapeGain.gain.value=0;
 });
 let clickPt = null;
@@ -348,21 +348,21 @@ async function toggleMic(){
   if(micEnabled){
     if(micStream) for(const tr of micStream.getTracks()) tr.stop();
     micStream=micSource=micAnalyser=micData=null; micEnabled=false; micStatus='OFF';
-    toast('🎙 실제 마이크 OFF'); return;
+    toast('🎙 Real microphone OFF'); return;
   }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    micStatus='지원 안 됨'; toast('이 브라우저는 마이크를 지원하지 않습니다'); return;
+    micStatus='Unsupported'; toast('This browser doesn’t support microphone'); return;
   }
   try{
     ensureAudio();
-    micStatus='권한 확인 중';
+    micStatus='Checking';
     micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
     if(!AC) ensureAudio();
     micSource=AC.createMediaStreamSource(micStream);
     micAnalyser=AC.createAnalyser(); micAnalyser.fftSize=512; micAnalyser.smoothingTimeConstant=0.35;
     micData=new Uint8Array(micAnalyser.fftSize); micSource.connect(micAnalyser);
-    micEnabled=true; micStatus='ON'; toast('🎙 실제 마이크 ON — 놀라도 소리 지르지 마세요');
-  }catch(err){ micEnabled=false; micStatus='권한 거부'; toast('마이크를 켜지 못했습니다'); }
+    micEnabled=true; micStatus='ON'; toast('🎙 Real microphone ON — don’t scream');
+  }catch(err){ micEnabled=false; micStatus='Denied'; toast('Couldn’t enable the microphone'); }
 }
 function sampleMic(){
   if(!micEnabled||!micAnalyser||!micData){ micLevel=0; return 0; }
@@ -389,52 +389,52 @@ const GRAV = 2000, VG = 1900;
 const FDT = 1/60, SUB = 3, SDT = FDT/SUB, ITER = 6;
 
 const LEVELS = [
-  {name:'회식 탈출', desc:'원본 귀갓길. 기본기를 익히세요.', dmg:1.95, drain:1.85, par:150, grip:73, slip:0.058,stir:0.48, eye:62, cat:70, passive:0.12, start:82, cps:2},
-  {name:'골목의 턱', desc:'낮은 턱이 운반 박자를 흔듭니다.', dmg:2.03, drain:1.93, par:148, grip:72, slip:0.056,stir:0.47, eye:63, cat:68, passive:0.13, start:81, cps:2},
-  {name:'간판 지옥', desc:'낮은 천장과 단차가 동시에 옵니다.', dmg:2.12, drain:2.01, par:146, grip:71, slip:0.055,stir:0.46, eye:64, cat:67, passive:0.14, start:80, cps:1},
-  {name:'고양이 골목', desc:'속도를 내면 사고가 연쇄됩니다.', dmg:2.20, drain:2.09, par:144, grip:69, slip:0.053,stir:0.44, eye:66, cat:65, passive:0.15, start:79, cps:1},
-  {name:'숙취 육교', desc:'오르막과 천장이 그립을 뜯어냅니다.', dmg:2.29, drain:2.17, par:142, grip:68, slip:0.052,stir:0.43, eye:67, cat:63, passive:0.16, start:78, cps:1},
-  {name:'택시 거부', desc:'회복 구간이 줄고 뒤척임이 빨라집니다.', dmg:2.37, drain:2.26, par:140, grip:67, slip:0.050,stir:0.42, eye:68, cat:62, passive:0.17, start:76, cps:1},
-  {name:'새벽 세 시', desc:'부장님이 얕은 잠에서 시작합니다.', dmg:2.46, drain:2.34, par:138, grip:66, slip:0.049,stir:0.41, eye:69, cat:60, passive:0.18, start:75, cps:1},
-  {name:'인사평가 전야', desc:'실수 한 번이 숙면도를 크게 깎습니다.', dmg:2.54, drain:2.42, par:136, grip:65, slip:0.047,stir:0.40, eye:70, cat:58, passive:0.19, start:74, cps:1},
-  {name:'임원 관문', desc:'체크포인트는 출발점 하나뿐입니다.', dmg:2.63, drain:2.50, par:133, grip:63, slip:0.046,stir:0.38, eye:72, cat:57, passive:0.20, start:73, cps:1},
-  {name:'월요일 예행연습', desc:'첫 번째 관문. 이제 진짜 귀가가 시작됩니다.', dmg:2.71, drain:2.58, par:131, grip:62, slip:0.044,stir:0.37, eye:73, cat:55, passive:0.21, start:72, cps:1},
-  {name:'막차 끊김', desc:'택시도 막차도 없습니다. 발밑만 믿으세요.', dmg:2.79, drain:2.66, par:129, grip:61, slip:0.043,stir:0.36, eye:74, cat:53, passive:0.22, start:71, cps:1},
-  {name:'편의점 불빛', desc:'좁은 통로에서 부장님이 더 자주 뒤척입니다.', dmg:2.88, drain:2.74, par:127, grip:60, slip:0.041,stir:0.35, eye:75, cat:52, passive:0.23, start:70, cps:1},
-  {name:'공사장 우회', desc:'턱과 자재가 안전한 보폭을 빼앗습니다.', dmg:2.96, drain:2.82, par:125, grip:59, slip:0.040,stir:0.34, eye:76, cat:50, passive:0.24, start:69, cps:1},
-  {name:'배달 오토바이', desc:'급하게 움직일수록 손이 더 빨리 미끄러집니다.', dmg:3.05, drain:2.90, par:123, grip:57, slip:0.038,stir:0.32, eye:78, cat:48, passive:0.25, start:68, cps:1},
-  {name:'경찰 검문', desc:'낮은 구조물 아래에서 호흡을 맞추세요.', dmg:3.13, drain:2.98, par:121, grip:56, slip:0.037,stir:0.31, eye:79, cat:47, passive:0.26, start:67, cps:1},
-  {name:'비상계단', desc:'연속 단차가 앞뒤 사람의 박자를 시험합니다.', dmg:3.22, drain:3.07, par:119, grip:55, slip:0.035,stir:0.30, eye:80, cat:45, passive:0.28, start:65, cps:1},
-  {name:'취객의 합창', desc:'소음 한 번이 연쇄 사고로 이어집니다.', dmg:3.30, drain:3.15, par:117, grip:54, slip:0.034,stir:0.29, eye:81, cat:44, passive:0.29, start:64, cps:1},
-  {name:'폭우 전조', desc:'그립 한계가 줄어들어 짧게 잡아야 합니다.', dmg:3.39, drain:3.23, par:115, grip:52, slip:0.032,stir:0.27, eye:83, cat:42, passive:0.30, start:63, cps:1},
-  {name:'새벽 시장', desc:'골목 전체가 장애물이 되기 시작합니다.', dmg:3.47, drain:3.31, par:113, grip:51, slip:0.031,stir:0.26, eye:84, cat:40, passive:0.31, start:62, cps:1},
-  {name:'강남대로 결승', desc:'두 번째 관문. 실수할 여유가 거의 없습니다.', dmg:3.56, drain:3.39, par:111, grip:50, slip:0.029,stir:0.25, eye:85, cat:39, passive:0.32, start:61, cps:1},
-  {name:'대리기사 실종', desc:'시작부터 얕은 잠입니다. 천천히 전진하세요.', dmg:3.64, drain:3.47, par:109, grip:49, slip:0.028,stir:0.24, eye:86, cat:37, passive:0.33, start:60, cps:1},
-  {name:'지하도 역풍', desc:'낮은 천장과 턱이 번갈아 덮칩니다.', dmg:3.72, drain:3.55, par:107, grip:48, slip:0.026,stir:0.23, eye:87, cat:35, passive:0.34, start:59, cps:1},
-  {name:'인사팀 전화', desc:'눈을 뜨는 구간이 길어지고 잦아집니다.', dmg:3.81, drain:3.63, par:104, grip:46, slip:0.025,stir:0.21, eye:89, cat:34, passive:0.35, start:58, cps:1},
-  {name:'회장님 목격', desc:'고양이 앞에서는 거의 멈춰야 합니다.', dmg:3.89, drain:3.71, par:102, grip:45, slip:0.023,stir:0.20, eye:90, cat:32, passive:0.36, start:57, cps:1},
-  {name:'동틀 무렵', desc:'남은 숙면도와 시간이 동시에 줄어듭니다.', dmg:3.98, drain:3.79, par:100, grip:44, slip:0.022,stir:0.19, eye:91, cat:30, passive:0.37, start:56, cps:1},
-  {name:'월요일 출근길', desc:'귀가 행렬과 출근 행렬이 충돌합니다.', dmg:4.06, drain:3.88, par:98, grip:43, slip:0.020,stir:0.18, eye:92, cat:29, passive:0.38, start:54, cps:1},
-  {name:'감사팀 관문', desc:'작은 충격도 치명적입니다. 놓지 마세요.', dmg:4.15, drain:3.96, par:96, grip:42, slip:0.019,stir:0.17, eye:93, cat:27, passive:0.39, start:53, cps:1},
-  {name:'승진 심사대', desc:'모든 구간에서 완벽한 합이 필요합니다.', dmg:4.23, drain:4.04, par:94, grip:40, slip:0.017,stir:0.15, eye:95, cat:25, passive:0.40, start:52, cps:1},
-  {name:'대표이사 앞', desc:'마지막 문턱. 한 번의 방심도 허용하지 않습니다.', dmg:4.32, drain:4.12, par:92, grip:39, slip:0.016,stir:0.14, eye:96, cat:24, passive:0.41, start:51, cps:1},
-  {name:'전설의 귀가', desc:'30단계 최종전. 부장님을 집까지 배달하세요.', dmg:4.40, drain:4.20, par:90, grip:38, slip:0.014,stir:0.13, eye:97, cat:22, passive:0.42, start:50, cps:1}
+  {name:'Dinner Escape', desc:'The original walk home. Learn the basics.', dmg:1.95, drain:1.85, par:150, grip:73, slip:0.058,stir:0.48, eye:62, cat:70, passive:0.12, start:82, cps:2},
+  {name:'Alley Ledges', desc:'Low ledges break your carrying rhythm.', dmg:2.03, drain:1.93, par:148, grip:72, slip:0.056,stir:0.47, eye:63, cat:68, passive:0.13, start:81, cps:2},
+  {name:'Signboard Hell', desc:'Low ceilings and steps hit at once.', dmg:2.12, drain:2.01, par:146, grip:71, slip:0.055,stir:0.46, eye:64, cat:67, passive:0.14, start:80, cps:1},
+  {name:'Cat Alley', desc:'Speed turns mistakes into chain accidents.', dmg:2.20, drain:2.09, par:144, grip:69, slip:0.053,stir:0.44, eye:66, cat:65, passive:0.15, start:79, cps:1},
+  {name:'Hangover Overpass', desc:'Climbs and ceilings tear at your grip.', dmg:2.29, drain:2.17, par:142, grip:68, slip:0.052,stir:0.43, eye:67, cat:63, passive:0.16, start:78, cps:1},
+  {name:'Taxi Refusal', desc:'Fewer safe zones, faster tossing.', dmg:2.37, drain:2.26, par:140, grip:67, slip:0.050,stir:0.42, eye:68, cat:62, passive:0.17, start:76, cps:1},
+  {name:'3 A.M.', desc:'The Boss starts in light sleep.', dmg:2.46, drain:2.34, par:138, grip:66, slip:0.049,stir:0.41, eye:69, cat:60, passive:0.18, start:75, cps:1},
+  {name:'Review Eve', desc:'One mistake carves deep into his sleep.', dmg:2.54, drain:2.42, par:136, grip:65, slip:0.047,stir:0.40, eye:70, cat:58, passive:0.19, start:74, cps:1},
+  {name:'Executive Gate', desc:'Only one checkpoint: the start.', dmg:2.63, drain:2.50, par:133, grip:63, slip:0.046,stir:0.38, eye:72, cat:57, passive:0.20, start:73, cps:1},
+  {name:'Monday Rehearsal', desc:'First gate. The real trip home begins.', dmg:2.71, drain:2.58, par:131, grip:62, slip:0.044,stir:0.37, eye:73, cat:55, passive:0.21, start:72, cps:1},
+  {name:'Last Train Gone', desc:'No taxi, no train. Trust your feet.', dmg:2.79, drain:2.66, par:129, grip:61, slip:0.043,stir:0.36, eye:74, cat:53, passive:0.22, start:71, cps:1},
+  {name:'Convenience Glow', desc:'He tosses more in narrow passages.', dmg:2.88, drain:2.74, par:127, grip:60, slip:0.041,stir:0.35, eye:75, cat:52, passive:0.23, start:70, cps:1},
+  {name:'Construction Detour', desc:'Ledges and debris steal your footing.', dmg:2.96, drain:2.82, par:125, grip:59, slip:0.040,stir:0.34, eye:76, cat:50, passive:0.24, start:69, cps:1},
+  {name:'Delivery Bikes', desc:'The faster you rush, the faster hands slip.', dmg:3.05, drain:2.90, par:123, grip:57, slip:0.038,stir:0.32, eye:78, cat:48, passive:0.25, start:68, cps:1},
+  {name:'Police Checkpoint', desc:'Sync your breathing under low structures.', dmg:3.13, drain:2.98, par:121, grip:56, slip:0.037,stir:0.31, eye:79, cat:47, passive:0.26, start:67, cps:1},
+  {name:'Fire Stairs', desc:'Stair chains test both carriers’ rhythm.', dmg:3.22, drain:3.07, par:119, grip:55, slip:0.035,stir:0.30, eye:80, cat:45, passive:0.28, start:65, cps:1},
+  {name:'Drunken Chorus', desc:'One noise cascades into disaster.', dmg:3.30, drain:3.15, par:117, grip:54, slip:0.034,stir:0.29, eye:81, cat:44, passive:0.29, start:64, cps:1},
+  {name:'Coming Storm', desc:'Grip limit shrinks — hold in short bursts.', dmg:3.39, drain:3.23, par:115, grip:52, slip:0.032,stir:0.27, eye:83, cat:42, passive:0.30, start:63, cps:1},
+  {name:'Dawn Market', desc:'The whole alley becomes an obstacle.', dmg:3.47, drain:3.31, par:113, grip:51, slip:0.031,stir:0.26, eye:84, cat:40, passive:0.31, start:62, cps:1},
+  {name:'Gangnam Finals', desc:'Second gate. Almost no room for error.', dmg:3.56, drain:3.39, par:111, grip:50, slip:0.029,stir:0.25, eye:85, cat:39, passive:0.32, start:61, cps:1},
+  {name:'Missing Driver', desc:'Light sleep from the start. Move slowly.', dmg:3.64, drain:3.47, par:109, grip:49, slip:0.028,stir:0.24, eye:86, cat:37, passive:0.33, start:60, cps:1},
+  {name:'Underpass Wind', desc:'Ceilings and ledges alternate endlessly.', dmg:3.72, drain:3.55, par:107, grip:48, slip:0.026,stir:0.23, eye:87, cat:35, passive:0.34, start:59, cps:1},
+  {name:'HR Call', desc:'Eye-opening spells grow longer, more frequent.', dmg:3.81, drain:3.63, par:104, grip:46, slip:0.025,stir:0.21, eye:89, cat:34, passive:0.35, start:58, cps:1},
+  {name:'Chairman Sighting', desc:'Near the cat you must almost stop.', dmg:3.89, drain:3.71, par:102, grip:45, slip:0.023,stir:0.20, eye:90, cat:32, passive:0.36, start:57, cps:1},
+  {name:'Daybreak', desc:'Sleep and time run out together.', dmg:3.98, drain:3.79, par:100, grip:44, slip:0.022,stir:0.19, eye:91, cat:30, passive:0.37, start:56, cps:1},
+  {name:'Monday Commute', desc:'Homebound meets the morning commute.', dmg:4.06, drain:3.88, par:98, grip:43, slip:0.020,stir:0.18, eye:92, cat:29, passive:0.38, start:54, cps:1},
+  {name:'Audit Gate', desc:'Even small impacts are fatal. Don’t let go.', dmg:4.15, drain:3.96, par:96, grip:42, slip:0.019,stir:0.17, eye:93, cat:27, passive:0.39, start:53, cps:1},
+  {name:'Promotion Board', desc:'Every section demands perfect sync.', dmg:4.23, drain:4.04, par:94, grip:40, slip:0.017,stir:0.15, eye:95, cat:25, passive:0.40, start:52, cps:1},
+  {name:'CEO’s Doorstep', desc:'The final threshold. Zero lapses allowed.', dmg:4.32, drain:4.12, par:92, grip:39, slip:0.016,stir:0.14, eye:96, cat:24, passive:0.41, start:51, cps:1},
+  {name:'Legendary Homecoming', desc:'Stage 30 finale. Deliver the Boss home.', dmg:4.40, drain:4.20, par:90, grip:38, slip:0.014,stir:0.13, eye:97, cat:22, passive:0.42, start:50, cps:1}
 ];
 
 const MAP_THEMES = [
-  {name:'회식 골목',top:'#0b1026',bottom:'#1c2447',far:'#131a36',near:'#171f40',accent:'#ff5d8f',sign:'회식 골목'},
-  {name:'새벽 시장',top:'#10152d',bottom:'#27314b',far:'#1b2338',near:'#252f43',accent:'#ffd45e',sign:'새벽 시장'},
-  {name:'공사장 우회',top:'#111624',bottom:'#303642',far:'#202633',near:'#2c3440',accent:'#ff8a5b',sign:'공사 구간'},
-  {name:'지하도',top:'#081720',bottom:'#173642',far:'#102832',near:'#17343e',accent:'#5ce1e6',sign:'지하도'},
-  {name:'강남대로',top:'#100d2b',bottom:'#302451',far:'#1d1740',near:'#282052',accent:'#a78bfa',sign:'강남대로'},
-  {name:'아파트 언덕',top:'#17101f',bottom:'#463247',far:'#2b2033',near:'#3a2b3d',accent:'#ffcf8a',sign:'명진마을'}
+  {name:'Bar Alley',top:'#0b1026',bottom:'#1c2447',far:'#131a36',near:'#171f40',accent:'#ff5d8f',sign:'Bar Alley'},
+  {name:'Dawn Market',top:'#10152d',bottom:'#27314b',far:'#1b2338',near:'#252f43',accent:'#ffd45e',sign:'Dawn Market'},
+  {name:'Construction Detour',top:'#111624',bottom:'#303642',far:'#202633',near:'#2c3440',accent:'#ff8a5b',sign:'Construction'},
+  {name:'Underpass',top:'#081720',bottom:'#173642',far:'#102832',near:'#17343e',accent:'#5ce1e6',sign:'Underpass'},
+  {name:'Gangnam Blvd',top:'#100d2b',bottom:'#302451',far:'#1d1740',near:'#282052',accent:'#a78bfa',sign:'Gangnam Blvd'},
+  {name:'Apartment Hill',top:'#17101f',bottom:'#463247',far:'#2b2033',near:'#3a2b3d',accent:'#ffcf8a',sign:'Myeongjin Village'}
 ];
 
 function mapRng(seed){
   let n=seed>>>0;
   return ()=>{ n=(Math.imul(n,1664525)+1013904223)>>>0; return n/4294967296; };
 }
-/* ---------------- 30개 레벨 고유 맵 레시피 ----------------
+/* ---------------- 30 레벨 고유 맵 레시피 ----------------
    L:길이  g:장애물 그룹 수  lay:배치 곡선  th:테마  kinds:장애물 어휘
    cat/tr/tx:고양이·쓰레기·택시 위치(맵 비율)  sil:정숙 구간  cp:체크포인트  hz:장애물 강도 */
 const MAP_RECIPES=[
@@ -507,7 +507,7 @@ function box(x,y,w,h,tag){ solids.push({x,y,w,h,tag:tag||''}); return solids[sol
 function addObstacleGroup(x,kind,rng,level,hz){
   const H=v=>Math.min(84,Math.round(v));
   const h=H((16+rng()*14+level*0.8)*hz);
-  const clear=Math.max(52,Math.round(61-level*0.55)); // 천장 통과 여유: lvl1=60, 16+에선 52(엇갈림 박스는 -8)
+  const clear=Math.max(52,Math.round(61-level*0.55)); // 천장 CLEAR 여유: lvl1=60, 16+에선 52(엇갈림 박스는 -8)
   if(kind===0){        // 오르막 3계단
     for(let i=0;i<3;i++){ const hh=H(h+i*7); box(x+i*34,G_Y-hh,30,hh,'level'); }
   } else if(kind===1){ // 낮은 천장 3연속
@@ -691,10 +691,10 @@ function stepBossPhysics(){
     const mm=Math.sqrt(ddx*ddx+ddy*ddy);
     if(mm>30){ ddx*=30/mm; ddy*=30/mm; }
     p.x+=ddx; p.y+=ddy;
-    p.spd=Math.sqrt(ddx*ddx+ddy*ddy)/SDT; // 제약 적용 전 실제 속도(충격 판정용)
+    p.spd=Math.sqrt(ddx*ddx+ddy*ddy)/SDT; // 제약 적용 전 실제 속도(Impact 판정용)
     p.onGround=false;
   }
-  // 그립 핀
+  // GRIP 핀
   for(const c of carriers) c.applyGrip();
   for(let it=0; it<ITER; it++){
     for(const st of boss.sticks){
@@ -772,7 +772,7 @@ class Carrier{
       if(th>this.h && this.hitsSolid(this.x,ny,this.w,th)) { /* 천장 → 못 일어남 */ this.crouch=true; }
       else { this.y=ny; this.h=th; }
     }
-    // X 이동
+    // X 이
     this.x += this.vx*dt;
     for(const s of solids){
       if(!this.overlap(s)) continue;
@@ -785,7 +785,7 @@ class Carrier{
       }
     }
     this.x=clamp(this.x,-260,WORLD-40);
-    // Y 이동
+    // Y 이
     this.y += this.vy*dt;
     this.grounded=false;
     for(const s of solids){
@@ -798,7 +798,7 @@ class Carrier{
         if(this.vx>=0) this.x=s.x-this.w; else this.x=s.x+s.w;
       }
     }
-    // 그립 토글
+    // GRIP 토글
     let gPressed=false;
     for(const gk of k.G){ if(pressed[gk]) gPressed=true; }
     const m=this.midTarget(), an=this.anchor();
@@ -808,16 +808,16 @@ class Carrier{
     if(gPressed){
       if(this.grip){
         this.grip=false; lastGripChange[this.side()]=runTime; gripDropCnt++;
-        addFault(this.side(),5,'release'); sSlip(); toast(this.label+'가 손을 놓았다!');
+        addFault(this.side(),5,'release'); sSlip(); toast(this.label+' let go!');
       }
       else if(near){ this.grip=true; lastGripChange[this.side()]=runTime; onRegrip(this.side()); sChime(); }
     }
-    // 과신전 슬립
+    // Overreach 슬립
     const saveGripBoost=friendSave&&friendSave.holder===this.side()&&friendSave.t<=3.2?1.35:1;
     if(this.grip && this.stretch>diff.grip*saveGripBoost){ this.slipT+=dt; if(this.slipT>diff.slip){
       this.grip=false; this.slipT=0; lastGripChange[this.side()]=runTime; gripDropCnt++;
       addFault(this.side(),12,'slip'); sSlip();
-      toast('⚠ '+this.label+' 손이 미끄러졌다!'); shake=8;
+      toast('⚠ '+this.label+' hand slipped!'); shake=8;
     }} else this.slipT=0;
     this.walkPh += Math.abs(this.vx)*dt*0.05;
     this.stretchShown=this.stretch; this.stretch=0;
@@ -854,22 +854,22 @@ let silentZone={active:false,t:0,index:-1,hitCd:0,pulseDone:false,frontMsg:'',ba
 let headHitCnt=0, gripDropCnt=0, manualResetCnt=0, mission=null;
 let trash={x:activeMap.trashX,spilled:false};
 let taxi={x0:activeMap.taxiX0,x1:activeMap.taxiX1,active:true,entered:false,t:0,success:false,failed:false,leaveAt:60,gone:false,driveT:0,warned:false};
-const REASON_KO = {release:'손을 스스로 놓아버림', slip:'무리하게 당겨 손이 미끄러짐',
-  impact:'낙하 충격 유발', drag:'부장님을 바닥에 끌고 다님', cat:'고양이를 놀라게 함',
-  bottle:'소주병을 걷어참', abandon:'부장님을 길에 방치함', mic:'고함으로 숙면을 방해함'};
-const REASON_SHORT={release:'손놓음',slip:'과신전',impact:'충격',drag:'끌기',cat:'환경사고',bottle:'환경사고',abandon:'방치',mic:'소음'};
-const SLEEPTALK=['으음… 김대리… 그 보고서는…','한 잔만… 딱 한 잔만 더…','우리 팀은… 가족이야…','라떼는… 말이야…','으어… 2차… 2차 가야지…','…내가 다 책임진다니까…'];
-const WAKELINES=['야!! 여기가 어디야!!','김대리… 자네 지금 뭐 하는 건가…','내 구두!! 내 구두 어디 갔어!!','자네들, 내일 아침에 보자.','이게 지금 몇 시야!!'];
+const REASON_KO = {release:'Let go on purpose', slip:'Overstretched and slipped',
+  impact:'Caused a fall impact', drag:'Dragged the Boss on the ground', cat:'Startled the cat',
+  bottle:'Kicked a soju bottle', abandon:'Abandoned the Boss', mic:'Yelled him awake'};
+const REASON_SHORT={release:'Let go',slip:'Overreach',impact:'Impact',drag:'Dragging',cat:'Env. accident',bottle:'Env. accident',abandon:'Abandoned',mic:'Noise'};
+const SLEEPTALK=['Mmm… Kim… that report…','One more… just one more drink…','Our team… is family…','Back in my day…','Ugh… round two… round two…','…I’ll take full responsibility…'];
+const WAKELINES=['HEY!! Where am I?!','Kim… what exactly are you doing…','My shoes!! Where are my shoes?!','You two. My office, tomorrow morning.','What time is it right now?!'];
 const SILENT_EVENTS=[
-  {front:'⚠ 3초 뒤 크게 뒤척입니다',back:'⚠ 앞에 소주병 구간이 있습니다'},
-  {front:'⚠ 앞에 낮은 간판이 있습니다',back:'⚠ 3초 뒤 크게 뒤척입니다'}
+  {front:'⚠ Big toss in 3 seconds',back:'⚠ Soju bottles ahead'},
+  {front:'⚠ Low signboard ahead',back:'⚠ Big toss in 3 seconds'}
 ];
 const MISSIONS=[
-  {id:'quiet',title:'쉿!',desc:'소음을 3회 이하로',short:'소음 ≤ 3'},
-  {id:'head',title:'무사 귀환',desc:'머리를 바닥에 부딪히지 않기',short:'머리 충격 0'},
-  {id:'fast',title:'빠른 귀가',desc:'3분 안에 도착',short:'03:00 이내'},
-  {id:'balance',title:'공동 책임',desc:'과실 차이 10% 이하',short:'과실 차 ≤ 10%'},
-  {id:'grip',title:'철벽 경호',desc:'누구도 손을 놓지 않기',short:'그립 해제 0'}
+  {id:'quiet',title:'Shh!',desc:'Keep noise to 3 or less',short:'Noise ≤ 3'},
+  {id:'head',title:'Safe Return',desc:'Don’t bang his head',short:'Head hits 0'},
+  {id:'fast',title:'Speedy Trip',desc:'Arrive within 3 minutes',short:'Under 03:00'},
+  {id:'balance',title:'Shared Blame',desc:'Blame gap within 10%',short:'Blame gap ≤ 10%'},
+  {id:'grip',title:'Iron Grip',desc:'Nobody lets go',short:'Releases 0'}
 ];
 
 function addFault(side,amt,reason){
@@ -910,8 +910,8 @@ function triggerIncident(p,spd,dmg){
   const frontBody=boss.headEnd.indexOf(p)>=0;
   if(frontBody) fs+=22; else bs+=22;
   let fp=clamp(Math.round(fs/(fs+bs)*100),8,92), bp=100-fp;
-  const part=p===boss.pts.head?'머리':p===boss.pts.chest?'상체':frontBody?'팔·어깨':'하체';
-  incident={title:'부장님 '+part+' 충돌',fp,bp,t:0,dur:1.9,dmg,
+  const part=p===boss.pts.head?'Head':p===boss.pts.chest?'Torso':frontBody?'Arms':'Legs';
+  incident={title:'Boss '+part+' impact',fp,bp,t:0,dur:1.9,dmg,
     frontReason:REASON_SHORT[fe.reason],backReason:REASON_SHORT[be.reason]}; incidentCd=1.8;
   const event=emitGameEvent('impact',{title:incident.title,fp,bp,dmg,
     reasons:{front:fe.reason,back:be.reason},evidence:{front:fe,back:be}});
@@ -924,13 +924,13 @@ function addRescue(side,name,score){
   if(side==='front'||side==='back'){
     const r=rescues[side]; r.score+=score; r.counts[name]=(r.counts[name]||0)+1;
   }
-  emitGameEvent(name==='간발의 차'?'near_save':name==='독박 운반'?'solo_hold':'rescue',{side,name,score});
+  emitGameEvent(name==='Narrow Escape'?'near_save':name==='Solo Burden'?'solo_hold':'rescue',{side,name,score});
   incident={title:name+'!  +'+score,fp:null,bp:null,t:0,dur:1.7,rescue:true};
   sChime(); for(let i=0;i<8;i++) spawnP('star',boss.pts.chest.x,boss.pts.chest.y-20);
 }
 function onRegrip(side){
-  if(bothLoose&&runTime-bothLooseAt<=0.7){ addRescue(side,'기사회생',300); bothLoose=false; }
-  if(nearMissArmed&&nearMissT>0){ addRescue(side,'간발의 차',150); nearMissArmed=false; }
+  if(bothLoose&&runTime-bothLooseAt<=0.7){ addRescue(side,'Clutch Save',300); bothLoose=false; }
+  if(nearMissArmed&&nearMissT>0){ addRescue(side,'Narrow Escape',150); nearMissArmed=false; }
 }
 function faultPercent(){
   let f=faults.front.total,b=faults.back.total; if(f+b<1){f=1;b=1;}
@@ -959,9 +959,9 @@ function onBossImpact(p,spd){
   triggerIncident(p,spd,dmg);
   if(dmg>5){
     noiseCnt++;
-    spawnP('text',p.x,p.y-24,'쿵!');
+    spawnP('text',p.x,p.y-24,'Thud!');
     for(let i=0;i<4;i++) spawnP('star',p.x,p.y-10);
-    if(isHead) bossSay('으윽…!',1.2);
+    if(isHead) bossSay('Urgh…!',1.2);
   }
 }
 function bossSay(txt,dur){ bossBubble={txt,t:0,dur:dur||2.2}; }
@@ -971,7 +971,7 @@ function triggerBossFlail(source){
   setVel(chest,rnd(-240,240),-rnd(180,300));
   setVel(pelvis,rnd(-240,240),-rnd(120,260));
   for(const p of [boss.pts.la,boss.pts.ra,boss.pts.lh,boss.pts.rh]) setVel(p,rnd(-320,320),-rnd(100,320));
-  bossSay('부스럭…!!',1.4);
+  bossSay('Rustle…!!',1.4);
   emitGameEvent(source==='silent'?'silent_event':'stir',{phase:'flail'});
 }
 function beginSilentEvent(index){
@@ -979,7 +979,7 @@ function beginSilentEvent(index){
   silentVisited[index]=true;
   silentZone={active:true,t:8,index,hitCd:0,pulseDone:false,frontMsg:info.front,backMsg:info.back};
   emitGameEvent('silent_event',{phase:'start',index,front:info.front,back:info.back});
-  toast('🤫 부장님이 선잠에 들었습니다 — 서로 다른 정보를 확인하세요');
+  toast('🤫 The Boss is dozing — you each see different intel');
 }
 
 function startGame(m){
@@ -1019,15 +1019,15 @@ function startLevel(level){
   respawn(true); state='play';
   nextStir=runTime+rnd(14,22)*diff.stir;
   toast('LEVEL '+currentLevel+' — '+levelCfg.name+': '+levelCfg.desc);
-  toast(activeMap.theme.name+' · '+Math.round(WORLD/10)+'m · 장애물 '+activeMap.obstacleCount+'개');
-  toast('오늘의 미션 — '+mission.title+': '+mission.desc);
-  if(currentLevel===1) toast(mode==='solo'?'연습 모드: 왼손이 뒷사람, 오른손이 앞사람!':'협동 모드: 서로 탓할 준비 되셨습니까');
+  toast(activeMap.theme.name+' · '+Math.round(WORLD/10)+'m · Obstacles '+activeMap.obstacleCount+'');
+  toast('Tonight’s mission — '+mission.title+': '+mission.desc);
+  if(currentLevel===1) toast(mode==='solo'?'Practice: left hand is Back, right hand is Front!':'Co-op: ready to blame each other?');
 }
 function respawn(fullMeter){
   const cp=CHECKPOINTS[cpIdx];
   carriers=[
-    new Carrier('back',  cp.x,     '#4f8ef7', KM_BACK,  '뒷사람'),
-    new Carrier('front', cp.x+150, '#3ec9a7', KM_FRONT, '앞사람')
+    new Carrier('back',  cp.x,     '#4f8ef7', KM_BACK,  'Back'),
+    new Carrier('front', cp.x+150, '#3ec9a7', KM_FRONT, 'Front')
   ];
   const f=carriers[1].anchor(), b=carriers[0].anchor();
   buildBoss(f.x,f.y,b.x,b.y);
@@ -1070,9 +1070,9 @@ function update(dt){
     if(!friendSave||friendSave.holder!==holder) friendSave={holder,t:0,soloAward:false};
     friendSave.t+=dt;
     soloHoldBest[holder]=Math.max(soloHoldBest[holder],friendSave.t);
-    if(friendSave.t>=2&&!friendSave.soloAward){ friendSave.soloAward=true; addRescue(holder,'독박 운반',200); }
+    if(friendSave.t>=2&&!friendSave.soloAward){ friendSave.soloAward=true; addRescue(holder,'Solo Burden',200); }
   } else if(gripCount===2&&friendSave){
-    if(friendSave.t<=3.2) addRescue(friendSave.holder,'팀워크 구조',250);
+    if(friendSave.t<=3.2) addRescue(friendSave.holder,'Teamwork Rescue',250);
     friendSave=null;
   } else if(gripCount===0){ friendSave=null; }
   if(gripCount===0&&!bothLoose){ bothLoose=true; bothLooseAt=runTime; }
@@ -1081,11 +1081,11 @@ function update(dt){
   const headVy=(head.y-head.py)/SDT;
   if(gripCount<2&&head.y>G_Y-45&&headVy>100){ nearMissArmed=true; nearMissT=0.65; }
 
-  // 수면 단계: 반수면에서는 갑자기 눈을 뜨며, 입력하면 추가 피해
+  // 수면 단계: Half-awake에서는 갑자기 눈을 뜨며, 입력하면 추가 피해
   if(!eyeOpen.active&&meter<=30&&runTime>eyeOpen.next){
     eyeOpen.active=true; eyeOpen.t=rnd(2.2,3); eyeOpen.moved=false; eyeOpen.penaltyCd=0;
     emitGameEvent('wake_eye',{phase:'start',duration:eyeOpen.t});
-    toast('👀 움직이지 마세요.'); bossSay('……',eyeOpen.t); sGroan();
+    toast('👀 Don’t move.'); bossSay('……',eyeOpen.t); sGroan();
   }
   if(eyeOpen.active){
     eyeOpen.t-=dt; eyeOpen.penaltyCd-=dt;
@@ -1093,11 +1093,11 @@ function update(dt){
     if(moved&&eyeOpen.penaltyCd<=0){
       if(!eyeOpen.moved) emitGameEvent('wake_eye',{phase:'caught'});
       eyeOpen.moved=true; eyeOpen.penaltyCd=0.32; meter-=3.5*diff.drain; sinceDmg=0;
-      toast('👀 들켰습니다! 움직이지 마세요'); shake=4;
+      toast('👀 He’s looking! Freeze!'); shake=4;
     }
     if(eyeOpen.t<=0){
       eyeOpen.active=false; eyeOpen.next=runTime+rnd(15,24)*diff.stir;
-      if(!eyeOpen.moved) addRescue('team','눈치 만점',100);
+      if(!eyeOpen.moved) addRescue('team','Perfect Read',100);
       emitGameEvent('wake_eye',{phase:eyeOpen.moved?'failed':'success'});
       bossSay('…zzz',1.4); sSnore();
     }
@@ -1109,22 +1109,22 @@ function update(dt){
     micHitCd=silentZone.active?0.55:0.9;
     const side=Math.abs(carriers[0].vx)>Math.abs(carriers[1].vx)?'back':'front';
     const dmg=silentZone.active?6:4; meter-=dmg*diff.drain; noiseCnt++; sinceDmg=0;
-    addFault(side,dmg,'mic'); toast(silentZone.active?'🤫 조용히 하세요!':'🔊 너무 시끄럽습니다!'); shake=5;
+    addFault(side,dmg,'mic'); toast(silentZone.active?'🤫 Keep quiet!':'🔊 Too loud!'); shake=5;
   }
   const silentXs=activeMap.silentXs;
   for(let i=0;i<silentXs.length;i++) if(!silentZone.active&&!silentVisited[i]&&chest.x>silentXs[i]) beginSilentEvent(i);
   if(silentZone.active){
     silentZone.t-=dt;
     if(!silentZone.pulseDone&&silentZone.t<=5){
-      silentZone.pulseDone=true; triggerBossFlail('silent'); toast('부장님이 크게 뒤척였다!');
+      silentZone.pulseDone=true; triggerBossFlail('silent'); toast('The Boss tossed hard!');
     }
     if(silentZone.t<=0){
       const index=silentZone.index; silentZone.active=false;
-      emitGameEvent('silent_event',{phase:'success',index}); addRescue('team','무음 통과',150);
+      emitGameEvent('silent_event',{phase:'success',index}); addRescue('team','Silent Pass',150);
     }
   }
 
-  // 끌기(드래그) 판정
+  // Dragging(드래그) 판정
   const touching = chest.onGround||pelvis.onGround||head.onGround;
   if(anyGrip && touching && avgSpd>90){
     meter -= 4.5*dt*diff.drain*sleepSensitivity(); sinceDmg=0;
@@ -1133,11 +1133,11 @@ function update(dt){
     if(dragNoiseT>1.1){ dragNoiseT=0; noiseCnt++;
       const side = head.onGround||chest.onGround?'front':'back';
       addFault(side,3,'drag');
-      spawnP('text',pelvis.x,pelvis.y-20,'드르륵…');
+      spawnP('text',pelvis.x,pelvis.y-20,'Rattle…');
     }
   } else if(scrapeGain) scrapeGain.gain.value*=0.8;
 
-  // 방치 판정
+  // Abandoned 판정
   if(!anyGrip){
     const near=Math.min(dist2(carriers[0].x,carriers[0].y,chest.x,chest.y),
                         dist2(carriers[1].x,carriers[1].y,chest.x,chest.y));
@@ -1155,8 +1155,8 @@ function update(dt){
         sMeow(); meter-=8*diff.drain; noiseCnt++; sinceDmg=0;
         addFault(c.side(),8,'cat'); shake=7;
         emitGameEvent('cat',{side:c.side(),reason:'cat'});
-        toast('🐈 고양이가 기겁했다!! ('+c.label+' 과실)');
-        bossSay('…읏, 시끄러…',1.6);
+        toast('🐈 The cat freaked out!! ('+c.label+' at fault)');
+        bossSay('…ugh, noisy…',1.6);
       }
     }
   } else if(catZone.runX>-200) catZone.runX-=520*dt;
@@ -1167,7 +1167,7 @@ function update(dt){
       for(const c of carriers){
         if(Math.abs(c.x+c.w/2-b.x)<20 && Math.abs(c.vx)>90 && c.grounded){
           b.k=true; b.vx=c.vx*1.8; sKick(); meter-=4*diff.drain; noiseCnt++; sinceDmg=0;
-          addFault(c.side(),4,'bottle'); spawnP('text',b.x,G_Y-40,'데구르르!');
+          addFault(c.side(),4,'bottle'); spawnP('text',b.x,G_Y-40,'Roll!');
           emitGameEvent('bottle',{side:c.side(),reason:'bottle',phase:'kick'});
         }
       }
@@ -1177,9 +1177,9 @@ function update(dt){
       if(!trash.spilled&&Math.abs(b.x-trash.x)<25){
         trash.spilled=true; b.done=true; sKick(); noiseCnt++; meter-=7*diff.drain;
         emitGameEvent('bottle',{phase:'chain'});
-        toast('🗑 쓰레기봉투 → 고양이 → 택시 경적!'); shake=8;
+        toast('🗑 Trash bag → cat → taxi horn!'); shake=8;
         if(!catZone.spooked){ catZone.spooked=true; catZone.runX=catZone.catX; sMeow(); }
-        setVel(chest,rnd(-180,180),-220); bossSay('으음… 시끄러…',1.8);
+        setVel(chest,rnd(-180,180),-220); bossSay('Mmm… too loud…',1.8);
       }
     }
   }
@@ -1188,8 +1188,8 @@ function update(dt){
   const activeCps=CHECKPOINTS.slice(0,levelCfg.cps);
   for(let i=cpIdx+1;i<activeCps.length;i++){
     if(chest.x>activeCps[i].x){
-      cpIdx=i; sChime(); toast('📍 체크포인트! 부장님이 편안해 보인다');
-      if(meter<=10) addRescue('team','극한의 눈치',500);
+      cpIdx=i; sChime(); toast('📍 Checkpoint! The Boss looks comfortable');
+      if(meter<=10) addRescue('team','Nerves of Steel',500);
     }
   }
 
@@ -1198,18 +1198,18 @@ function update(dt){
     const remain=taxi.leaveAt-runTime;
     if(remain<=0){
       taxi.failed=true; taxi.active=false; taxi.gone=true;
-      toast('🚕 택시가 떠났다… 조금만 빨랐다면'); sSlip();
+      toast('🚕 The taxi left… if only you were faster'); sSlip();
     } else {
-      if(remain<=5&&!taxi.warned){ taxi.warned=true; toast('🚕 택시 출발 5초 전! 서두르세요'); }
+      if(remain<=5&&!taxi.warned){ taxi.warned=true; toast('🚕 Taxi leaves in 5 seconds! Hurry'); }
       if(chest.x>taxi.x0-80&&chest.x<taxi.x1+80){
-        if(!taxi.entered){ taxi.entered=true; toast('🚕 뒷문에 조심히 내려놓으면 '+Math.round(activeMap.taxiSkip/10)+'m 단축!'); }
+        if(!taxi.entered){ taxi.entered=true; toast('🚕 Set him gently by the rear door to skip '+Math.round(activeMap.taxiSkip/10)+'m!'); }
         taxi.t+=dt;
         const inside=chest.x>taxi.x0+35&&chest.x<taxi.x1-35&&pelvis.x>taxi.x0+20&&pelvis.x<taxi.x1-20;
         if(inside&&!anyGrip&&(chest.onGround||pelvis.onGround)&&bossVel(chest)<95){
-          taxi.success=true; taxi.active=false; addRescue('team','택시 탑승 성공',400); sBell();
+          taxi.success=true; taxi.active=false; addRescue('team','Taxi Boarded',400); sBell();
           const dx=activeMap.taxiSkip; for(const c of carriers)c.x+=dx; for(const p of boss.list){p.x+=dx;p.px+=dx;}
-          toast('🚕 거리 -'+Math.round(dx/10)+'m! 기사님, 명진아파트로요');
-        } else if(taxi.t>12){ taxi.failed=true; taxi.active=false; toast('🚕 “손님, 그냥 내려주세요.”'); }
+          toast('🚕 Distance -'+Math.round(dx/10)+'m! Driver, to Myeongjin Apartments');
+        } else if(taxi.t>12){ taxi.failed=true; taxi.active=false; toast('🚕 "Sir, please just get out."'); }
       }
     }
   }
@@ -1219,14 +1219,14 @@ function update(dt){
   if(stirPending===null && runTime>nextStir){
     stirPending = Math.random()<0.45 ? 'flail':'talk';
     stirWarnT=1.25;
-    bossSay('으으음…',1.2);
+    bossSay('Mmmm…',1.2);
   }
   if(stirPending!==null){
     stirWarnT-=dt;
     if(stirWarnT<=0){
       if(stirPending==='flail'){
         triggerBossFlail('normal');
-        toast('부장님이 크게 뒤척였다!');
+        toast('The Boss tossed hard!');
       } else {
         sSnore(); bossSay(SLEEPTALK[(Math.random()*SLEEPTALK.length)|0],2.6);
       }
@@ -1264,12 +1264,12 @@ function update(dt){
       let pts=100 - wakeCnt*25 - Math.max(0,noiseCnt-2)*4 - Math.max(0,runTime-par)*0.2
         - Math.min(20,totalFault*0.08) - manualResetCnt*4;
       let g,cap;
-      if(pts>=90&&wakeCnt===0){g='S';cap='차기 임원감. 부장님이 아침에 해장국을 쏜다.';}
-      else if(pts>=75){g='A';cap='"자네만 믿네." — 두터운 신임을 얻었다.';}
-      else if(pts>=58){g='B';cap='무난한 직장생활이 이어진다.';}
-      else if(pts>=40){g='C';cap='월요일 아침, 어쩐지 눈치가 보인다.';}
-      else if(pts>=22){g='D';cap='사내에 팀 이동설이 돈다.';}
-      else {g='F';cap='지방 발령. 조용히 짐을 싸자.';}
+      if(pts>=90&&wakeCnt===0){g='S';cap='Executive material. The Boss buys hangover soup.';}
+      else if(pts>=75){g='A';cap='“I’m counting on you.” — Deep trust earned.';}
+      else if(pts>=58){g='B';cap='Office life continues, uneventfully.';}
+      else if(pts>=40){g='C';cap='Monday morning feels… tense.';}
+      else if(pts>=22){g='D';cap='Rumors of a team transfer circulate.';}
+      else {g='F';cap='Transferred to the countryside. Pack quietly.';}
       gradeInfo={g,cap,pts:Math.round(pts),missionOK:missionPassed(),level:currentLevel};
       campaignComplete=currentLevel===LEVELS.length;
       if(scrapeGain) scrapeGain.gain.value=0;
@@ -1382,7 +1382,7 @@ function drawLevel(){
       cx.lineTo(s.x+s.w,s.y+s.h-6); cx.quadraticCurveTo(s.x+s.w/2,s.y+s.h+8,s.x,s.y+s.h-6);
       cx.closePath(); cx.fill();
       cx.fillStyle='#ffe9d6'; cx.font='bold 17px sans-serif'; cx.textAlign='center';
-      cx.fillText('경축! 제 47회 명진마을 척사대회', s.x+s.w/2, s.y+s.h/2+6);
+      cx.fillText('The 47th Myeongjin Village Yut Festival!', s.x+s.w/2, s.y+s.h/2+6);
     } else if(s.tag==='lamp'){
       cx.fillStyle='#39415c'; cx.fillRect(s.x+s.w/2-4, 250, 8, s.y-250);
       cx.fillStyle='#ffd45e'; roundRect(s.x,s.y,s.w,s.h,10); cx.fill();
@@ -1390,7 +1390,7 @@ function drawLevel(){
       cx.beginPath(); cx.moveTo(s.x,s.y+s.h); cx.lineTo(s.x+s.w,s.y+s.h);
       cx.lineTo(s.x+s.w+50,G_Y-120); cx.lineTo(s.x-50,G_Y-120); cx.closePath(); cx.fill();
       cx.fillStyle='#1c2447'; cx.font='bold 13px sans-serif'; cx.textAlign='center';
-      cx.fillText('육교 조명', s.x+s.w/2, s.y+s.h/2+4);
+      cx.fillText('Overpass Light', s.x+s.w/2, s.y+s.h/2+4);
     } else if(s.tag==='bridge'){
       cx.fillStyle='#3d4560'; cx.fillRect(s.x,s.y,s.w,s.h);
       cx.fillStyle='#4d5675'; cx.fillRect(s.x,s.y,s.w,5);
@@ -1423,13 +1423,13 @@ function neon(x,y,txt,col,size){
   cx.shadowBlur=0;
 }
 function drawDecos(){
-  // 회식집
+  // 식집
   cx.fillStyle='#1f2750'; cx.fillRect(40,G_Y-190,330,190);
   cx.fillStyle='#141a36'; cx.fillRect(60,G_Y-160,80,60); cx.fillRect(160,G_Y-160,80,60);
   cx.fillStyle='rgba(255,178,84,0.85)'; cx.fillRect(60,G_Y-90,180,70);
   const flick = Math.sin(titleT*7)>-0.85?1:0.4;
   cx.globalAlpha=flick; neon(200,G_Y-205,activeMap.theme.sign,activeMap.theme.accent,26); cx.globalAlpha=1;
-  neon(320,G_Y-120,'LEVEL '+currentLevel+' 출발','#7c6cff',15);
+  neon(320,G_Y-120,'LEVEL '+currentLevel+' START','#7c6cff',15);
   // 레벨별 랜드마크
   const landmarkX=activeMap.landmarkX;
   cx.fillStyle=activeMap.theme.near; cx.fillRect(landmarkX-130,G_Y-170,260,170);
@@ -1466,13 +1466,13 @@ function drawDecos(){
     } else if(taxi.active&&!taxi.failed){
       const remain=Math.max(0,taxi.leaveAt-runTime);
       cx.fillStyle='#ffe9b8'; cx.font='bold 14px sans-serif';
-      cx.fillText(taxi.entered?'뒷문에 내려놓으세요!':'“어디까지 가세요?”',(taxi.x0+taxi.x1)/2,G_Y-146);
+      cx.fillText(taxi.entered?'Set him down by the rear door!':'"Where to?"',(taxi.x0+taxi.x1)/2,G_Y-146);
       cx.fillStyle=remain<=10?'#ff6b6b':'#ffd45e'; cx.font='900 15px sans-serif';
-      cx.fillText('⏱ 출발까지 '+Math.ceil(remain)+'초',(taxi.x0+taxi.x1)/2,G_Y-124);
+      cx.fillText('⏱ Leaves in '+Math.ceil(remain)+'s',(taxi.x0+taxi.x1)/2,G_Y-124);
     }
     cx.restore();
   }
-  // 쓰레기봉투: 굴러온 병과 충돌하면 연쇄 사고
+  // 쓰레기봉투: 굴러온 병과 impact하면 연쇄 사고
   cx.fillStyle=trash.spilled?'#4f5360':'#262b38';
   if(trash.spilled){
     for(let i=0;i<7;i++){ cx.beginPath(); cx.arc(trash.x-30+i*10,G_Y-7-(i%2)*4,7,0,7); cx.fill(); }
@@ -1508,13 +1508,13 @@ function drawDecos(){
   cx.fillStyle=doorLit?'#ffdf9e':'#141a36'; cx.fillRect(doorX+10,G_Y-120,90,120);
   cx.fillStyle='#242c52'; cx.fillRect(doorX+50,G_Y-70,8,16);
   cx.fillStyle='#e8ecff'; cx.font='bold 15px sans-serif'; cx.textAlign='center';
-  cx.fillText('명진아파트 '+String(currentLevel).padStart(2,'0')+'동',GOAL_CX,G_Y-146);
+  cx.fillText('Myeongjin Apt '+String(currentLevel).padStart(2,'0')+'',GOAL_CX,G_Y-146);
   // 골 존 표시
   if(state==='play'){
     cx.fillStyle='rgba(125,255,168,'+(0.06+0.04*Math.sin(titleT*3))+')';
     cx.fillRect(GOAL_X0,G_Y-180,GOAL_X1-GOAL_X0,180);
     cx.fillStyle='#7dffa8'; cx.font='bold 15px sans-serif';
-    cx.fillText(TOUCH_UI?'▼ 여기 내려놓기 (양쪽 그립 해제)':'▼ 여기 내려놓기 (그립 F / Shift·L 해제)',(GOAL_X0+GOAL_X1)/2,G_Y-190);
+    cx.fillText(TOUCH_UI?'▼ Set him down here (both release grip)':'▼ Set him down here (F / Shift·L to release)',(GOAL_X0+GOAL_X1)/2,G_Y-190);
   }
 }
 function capsule(a,b,w,col){
@@ -1540,7 +1540,7 @@ function drawBoss(){
   cx.beginPath(); cx.moveTo(p.neck.x,p.neck.y);
   cx.quadraticCurveTo(p.neck.x+Math.sin(titleT*4)*3, p.neck.y+14, p.neck.x+Math.sin(titleT*4)*5, p.neck.y+24);
   cx.stroke(); cx.lineWidth=1;
-  // 머리
+  // Head
   const hd=p.head;
   cx.fillStyle='#f0b6a0'; cx.beginPath(); cx.arc(hd.x,hd.y,15,0,7); cx.fill();
   cx.fillStyle='#3d3a45';
@@ -1594,7 +1594,7 @@ function drawCarrier(c){
   cx.beginPath(); cx.arc(cxm,y+5.4,9,Math.PI,0); cx.fill();
   cx.fillStyle='#26293a';
   cx.beginPath(); cx.arc(cxm+c.facing*3.4,y+8.6,1.7,0,7); cx.fill();
-  // 팔: 그립 앵커까지
+  // 팔: GRIP 앵커까지
   const an=c.anchor();
   cx.strokeStyle=c.color; cx.lineWidth=6;
   if(c.grip){
@@ -1612,24 +1612,24 @@ function drawCarrier(c){
     cx.beginPath(); cx.arc(cxm+11,y+2,3,0,7); cx.fill();
     if(c.stretchShown>80){
       cx.font='bold 13px sans-serif'; cx.fillStyle='#ff8d8d'; cx.textAlign='center';
-      cx.fillText('놓칠 것 같아!!',cxm,y-26);
+      cx.fillText('I’m losing him!!',cxm,y-26);
     }
   }
   // 리그랩 힌트
   if(c.regrabHint){
     cx.font='bold 13px sans-serif'; cx.fillStyle='#7dffa8'; cx.textAlign='center';
-    cx.fillText(TOUCH_UI?'[그립] 다시 잡기':c.role==='front'?'[Shift/L] 다시 잡기':'[F] 다시 잡기',cxm,y-14);
+    cx.fillText(TOUCH_UI?'[GRIP] Regrab':c.role==='front'?'[Shift/L] Regrab':'[F] Regrab',cxm,y-14);
     cx.strokeStyle='rgba(125,255,168,0.6)';
     cx.beginPath(); cx.arc(an.x,an.y,10+3*Math.sin(titleT*6),0,7); cx.stroke();
   }
   // 라벨
   cx.font='bold 12px sans-serif'; cx.textAlign='center';
   cx.fillStyle='rgba(255,255,255,0.55)';
-  cx.fillText(c.label+(mode==='solo'?(c.role==='front'?' (오른손)':' (왼손)'):''),cxm,y-2);
-  // 초반 조작 힌트
+  cx.fillText(c.label+(mode==='solo'?(c.role==='front'?' (right hand)':' (left hand)'):''),cxm,y-2);
+  // s반 조작 힌트
   if(c.x<860 && state==='play'){
     cx.fillStyle='rgba(223,230,255,0.75)'; cx.font='12px sans-serif';
-    const txt = TOUCH_UI?'◀▶ 이동 · ▲ 점프 · ▼ 숙이기 · 그립':c.role==='front'?'←→ 이동 · ↑ 점프 · ↓ 숙이기 · Shift/L 그립':'A D 이동 · W 점프 · S 숙이기 · F 그립';
+    const txt = TOUCH_UI?'◀▶ move · ▲ jump · ▼ crouch · grip':c.role==='front'?'←→ move · ↑ jump · ↓ crouch · Shift/L grip':'A D move · W jump · S crouch · F grip';
     cx.fillText(txt,cxm,y+h+18);
   }
 }
@@ -1661,7 +1661,7 @@ function drawSilentInfo(x,y,w,label,msg,color){
   cx.fillStyle='#fff'; cx.font='bold 16px sans-serif'; cx.fillText(msg,x+w/2,y+52);
 }
 function drawHUD(){
-  // 숙면 게이지
+  // Deep sleep 게이지
   const mw=280, mx=24, my=22;
   cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(mx-8,my-8,mw+66,52,12); cx.fill();
   const fc = meter>55?'#7dffa8':meter>28?'#ffd45e':'#ff6b6b';
@@ -1670,8 +1670,8 @@ function drawHUD(){
   cx.fillStyle='#2b3355'; roundRect(mx+38,my+4,mw,16,8); cx.fill();
   cx.fillStyle=fc; if(meter>1){ roundRect(mx+38,my+4,mw*meter/100,16,8); cx.fill(); }
   cx.fillStyle='#aeb9e6'; cx.font='bold 12px sans-serif'; cx.textAlign='left';
-  const stageName={deep:'숙면',light:'얕은 잠',half:'반수면',edge:'기상 직전'}[sleepStage()];
-  cx.fillText('부장님 숙면도 · '+stageName,mx+38,my+33);
+  const stageName={deep:'Deep sleep',light:'Light sleep',half:'Half-awake',edge:'About to wake'}[sleepStage()];
+  cx.fillText('Boss’s sleep · '+stageName,mx+38,my+33);
   if(meter<28){
     cx.fillStyle='rgba(255,90,90,'+(0.10+0.08*Math.sin(titleT*9))+')';
     cx.fillRect(0,0,VW,VH);
@@ -1686,14 +1686,14 @@ function drawHUD(){
   const prog=clamp(boss.pts.chest.x/GOAL_CX,0,1);
   cx.fillStyle='#ffd45e'; cx.beginPath(); cx.arc(px0+pw*prog,py0+5,6,0,7); cx.fill();
   cx.fillStyle='#aeb9e6'; cx.font='bold 12px sans-serif'; cx.textAlign='center';
-  cx.fillText('MAP '+String(currentLevel).padStart(2,'0')+' · '+activeMap.theme.name+' · '+Math.max(0,Math.round((GOAL_CX-boss.pts.chest.x)/10))+'m · 장애물 '+activeMap.obstacleCount,px0+pw/2,py0+17);
+  cx.fillText('MAP '+String(currentLevel).padStart(2,'0')+' · '+activeMap.theme.name+' · '+Math.max(0,Math.round((GOAL_CX-boss.pts.chest.x)/10))+'m · Obstacles '+activeMap.obstacleCount,px0+pw/2,py0+17);
   // 우측 상단 스탯
   cx.textAlign='right'; cx.fillStyle='rgba(223,230,255,0.85)'; cx.font='bold 14px sans-serif';
   const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
-  cx.fillText('난이도 '+('◆'.repeat(Math.ceil(currentLevel/6)))+('◇'.repeat(5-Math.ceil(currentLevel/6)))+'   '+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   소음 '+noiseCnt+'회   기상 '+wakeCnt+'회   클립 '+clipScore, VW-24, 34);
+  cx.fillText('Difficulty '+('◆'.repeat(Math.ceil(currentLevel/6)))+('◇'.repeat(5-Math.ceil(currentLevel/6)))+'   '+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   Noise '+noiseCnt+'   Wakes '+wakeCnt+'   Clips '+clipScore, VW-24, 34);
   cx.fillStyle='rgba(174,185,230,0.6)'; cx.font='12px sans-serif';
-  cx.fillText(TOUCH_UI?'터치 스틱 조작 · 상단 메뉴에서 재정비·일시정지': 'R 체크포인트 재시작 · P 일시정지 · M 음소거', VW-24, 54);
-  // 그립 상태
+  cx.fillText(TOUCH_UI?'Touch sticks · menu top-right for pause/regroup': 'R restart checkpoint · P pause · M mute', VW-24, 54);
+  // GRIP 상태
   drawGripChip(carriers[0], 24, VH-46);
   drawGripChip(carriers[1], VW-224, VH-46);
   // 토스트
@@ -1711,31 +1711,31 @@ function drawHUD(){
   // 뒤척임 경고
   if(stirPending!==null){
     cx.font='bold 26px sans-serif'; cx.fillStyle='#ffd45e'; cx.textAlign='center';
-    cx.fillText('⚠ 부장님이 뒤척인다…!',VW/2,170);
+    cx.fillText('⚠ The Boss is tossing…!',VW/2,170);
   }
   let alertY=silentZone.active?278:205;
   if(eyeOpen.active){
     cx.fillStyle='rgba(255,220,120,0.14)'; cx.fillRect(0,0,VW,VH);
     cx.font='900 34px sans-serif'; cx.fillStyle='#ffe27d'; cx.textAlign='center';
-    cx.fillText('👀 움직이지 마세요  '+eyeOpen.t.toFixed(1),VW/2,alertY);
+    cx.fillText('👀 Don’t move  '+eyeOpen.t.toFixed(1),VW/2,alertY);
     alertY+=38;
   }
   if(friendSave){
     cx.font='900 27px sans-serif'; cx.fillStyle='#7dffa8'; cx.textAlign='center';
-    cx.fillText('혼자 버티는 중!  '+Math.max(0,3.2-friendSave.t).toFixed(1),VW/2,alertY);
+    cx.fillText('Holding on alone!  '+Math.max(0,3.2-friendSave.t).toFixed(1),VW/2,alertY);
   }
   if(silentZone.active){
-    drawSilentInfo(38,126,420,'🟦 뒷사람 정보',silentZone.backMsg,'#7faaff');
-    drawSilentInfo(VW-458,126,420,'🟩 앞사람 정보',silentZone.frontMsg,'#7ddec7');
+    drawSilentInfo(38,126,420,'🟦 Back carrier',silentZone.backMsg,'#7faaff');
+    drawSilentInfo(VW-458,126,420,'🟩 Front carrier',silentZone.frontMsg,'#7ddec7');
     cx.font='900 22px sans-serif'; cx.fillStyle='#ffe27d'; cx.textAlign='center';
-    cx.fillText('🤫 선잠 · 말 대신 신호로  '+Math.ceil(silentZone.t)+'초',VW/2,230);
+    cx.fillText('🤫 Dozing · signal, don’t speak  '+Math.ceil(silentZone.t)+'s',VW/2,230);
   }
   cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(VW-230,VH-92,206,34,10); cx.fill();
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4'; cx.font='bold 13px sans-serif'; cx.textAlign='left';
-  cx.fillText('🎙 [V] 마이크 '+micStatus+(micEnabled?' '+Math.round(micLevel*100):''),VW-215,VH-70);
+  cx.fillText('🎙 [V] Mic '+micStatus+(micEnabled?' '+Math.round(micLevel*100):''),VW-215,VH-70);
   if(mission){
     cx.fillStyle='rgba(10,14,34,0.72)'; roundRect(VW/2-150,VH-48,300,34,10); cx.fill();
-    cx.fillStyle='#ffe9b8'; cx.textAlign='center'; cx.fillText('오늘의 미션 · '+mission.short,VW/2,VH-26);
+    cx.fillStyle='#ffe9b8'; cx.textAlign='center'; cx.fillText('Tonight’s mission · '+mission.short,VW/2,VH-26);
   }
 }
 function drawIncident(dt){
@@ -1747,14 +1747,14 @@ function drawIncident(dt){
   roundRect(VW/2-270,y-56,540,incident.rescue?106:170,16); cx.fill();
   cx.strokeStyle=incident.rescue?'#7dffa8':'#ff7676'; cx.lineWidth=3; cx.stroke(); cx.lineWidth=1;
   cx.textAlign='center'; cx.font='900 29px sans-serif'; cx.fillStyle=incident.rescue?'#baffcd':'#ff8c8c';
-  cx.fillText(incident.rescue?'🛟 '+incident.title:'⚠ 사고 발생 · '+incident.title,VW/2,y-17);
+  cx.fillText(incident.rescue?'🛟 '+incident.title:'⚠ Incident · '+incident.title,VW/2,y-17);
   if(!incident.rescue&&incident.fp!==null){
     cx.font='900 22px sans-serif'; cx.fillStyle='#fff';
-    cx.fillText('뒷사람 '+incident.bp+'%  :  '+incident.fp+'% 앞사람',VW/2,y+22);
+    cx.fillText('Back '+incident.bp+'%  :  '+incident.fp+'% Front',VW/2,y+22);
     cx.font='13px sans-serif'; cx.fillStyle='#ffd9a0';
-    cx.fillText('최근 1.5초 이동·당김·그립·거리·충돌 부위로 판정',VW/2,y+52);
+    cx.fillText('Ruled by the last 1.5s of movement, pulling, grip, distance, impact point',VW/2,y+52);
     cx.fillStyle='#ffb7b7';
-    cx.fillText('사유 · 뒷사람 '+incident.backReason+' / 앞사람 '+incident.frontReason,VW/2,y+78);
+    cx.fillText('Cause · Back '+incident.backReason+' / Front '+incident.frontReason,VW/2,y+78);
   }
   cx.globalAlpha=1;
   if(incident.t>=incident.dur) incident=null;
@@ -1765,43 +1765,43 @@ function drawGripChip(c,x,y){
   cx.fillStyle=on?'#3ec9a7':'#ff6b6b';
   cx.beginPath(); cx.arc(x+18,y+17,7,0,7); cx.fill();
   cx.fillStyle='#dfe6ff'; cx.font='bold 13px sans-serif'; cx.textAlign='left';
-  const key=TOUCH_UI?'그립':c.role==='front'?'Shift/L':'F';
-  cx.fillText(c.label+' ['+key+'] '+(on?'잡는 중':'놓음!'),x+34,y+22);
+  const key=TOUCH_UI?'GRIP':c.role==='front'?'Shift/L':'F';
+  cx.fillText(c.label+' ['+key+'] '+(on?'Gripping':'Released!'),x+34,y+22);
 }
 function drawTitle(){
   cx.fillStyle='rgba(8,11,28,0.78)'; cx.fillRect(0,0,VW,VH);
   cx.textAlign='center';
   cx.font='900 64px sans-serif';
   cx.fillStyle='#ffe9b8';
-  cx.fillText('부장님이 잠드셨다',VW/2,190);
+  cx.fillText('DON’T DROP HIM',VW/2,190);
   cx.save(); cx.translate(VW/2+330,128); cx.rotate(0.14);
   cx.strokeStyle='#e2564b'; cx.lineWidth=3.5; roundRect(-56,-24,112,48,8); cx.stroke();
-  cx.fillStyle='#e2564b'; cx.font='900 25px sans-serif'; cx.fillText('회식엔딩',0,9); cx.restore();
+  cx.fillStyle='#e2564b'; cx.font='900 25px sans-serif'; cx.fillText('AFTER-WORK',0,9); cx.restore();
   cx.fillStyle='#aeb9e6'; cx.font='500 21px sans-serif';
-  cx.fillText('30개 전부 다른 맵. 지형·배치·이벤트 위치까지 전부 다릅니다.',VW/2,236);
-  drawBtn(VW/2-455,300,290,86,TOUCH_UI?'👆 혼자':'[1]  혼자',TOUCH_UI?'양쪽 엄지로 두 사람을 동시에 조작':'왼손=뒷사람(WASD+F) · 오른손=앞사람(방향키+Shift/L)', keys._h1);
-  drawBtn(VW/2-145,300,290,86,TOUCH_UI?'👆 둘이서':'[2]  둘이서',TOUCH_UI?'화면 양쪽을 한 사람씩 맡아 조작':'키보드 반씩 나눠 잡기 · 서로 탓할 준비 필수', keys._h2);
-  drawBtn(VW/2+165,300,290,86,'🌐 [3]  온라인','공개 방 목록에서 골라 원격 2인 협동', keys._h3);
+  cx.fillText('All 30 maps are different — terrain, layout, even event positions.',VW/2,236);
+  drawBtn(VW/2-455,300,290,86,TOUCH_UI?'👆 Solo':'[1]  Solo',TOUCH_UI?'Both thumbs control both carriers':'Left hand = Back (WASD+F) · Right = Front (Arrows+Shift/L)', keys._h1);
+  drawBtn(VW/2-145,300,290,86,TOUCH_UI?'👆 Local 2P':'[2]  Local 2P',TOUCH_UI?'One player per half of the screen':'Share one keyboard · Prepare to blame each other', keys._h2);
+  drawBtn(VW/2+165,300,290,86,'🌐 [3]  Online','Pick a public room, play co-op remotely', keys._h3);
   cx.fillStyle='rgba(20,25,52,0.9)'; roundRect(VW-170,24,146,40,20); cx.fill();
   cx.strokeStyle='#39415c'; cx.stroke();
   cx.fillStyle='#dfe6ff'; cx.font='800 15px sans-serif'; cx.textAlign='center';
-  cx.fillText('🌐 English',VW-97,49);
+  cx.fillText('🌐 한국어',VW-97,49);
   // 조작표
   cx.fillStyle='rgba(20,25,52,0.9)'; roundRect(VW/2-420,430,840,180,14); cx.fill();
   cx.strokeStyle='#39415c'; cx.stroke();
   cx.textAlign='left'; cx.font='bold 17px sans-serif';
-  cx.fillStyle='#4f8ef7'; cx.fillText('🟦 뒷사람',VW/2-380,470);
+  cx.fillStyle='#4f8ef7'; cx.fillText('🟦 Back',VW/2-380,470);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText(TOUCH_UI?'왼쪽 파란 스틱     좌우로 밀어 이동 · 위로 점프 · 아래로 숙이기 · 그립 버튼':'A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
-  cx.fillStyle='#3ec9a7'; cx.font='bold 17px sans-serif'; cx.fillText('🟩 앞사람',VW/2-380,540);
+  cx.fillText(TOUCH_UI?'Left blue stick — push to move, up to jump, down to crouch · Grip button':'A / D move     W jump     S crouch     F grip / release',VW/2-380,500);
+  cx.fillStyle='#3ec9a7'; cx.font='bold 17px sans-serif'; cx.fillText('🟩 Front',VW/2-380,540);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText(TOUCH_UI?'오른쪽 초록 스틱   좌우로 밀어 이동 · 위로 점프 · 아래로 숙이기 · 그립 버튼':'← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 또는 L 그립 잡기·놓기',VW/2-380,570);
+  cx.fillText(TOUCH_UI?'Right green stick — push to move, up to jump, down to crouch · Grip button':'← / → move     ↑ jump     ↓ crouch     Shift (either) or L grip / release',VW/2-380,570);
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
-  cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
+  cx.fillText('Crouch under signs (the Boss drags), jump ledges in sync. Go slow near the cat.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.7.0 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
+  cx.fillText('v0.7.0 — 420m to 900m, 30 unique maps, PC & mobile',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
-  cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
+  cx.fillText('[V] Real microphone '+micStatus+' (optional · default OFF)',VW/2,674);
 }
 function drawBtn(x,y,w,h,t1,t2,hover){
   cx.fillStyle='rgba(31,39,80,0.95)'; roundRect(x,y,w,h,14); cx.fill();
@@ -1813,7 +1813,7 @@ function drawBtn(x,y,w,h,t1,t2,hover){
 function topReason(side){
   const rs=faults[side].reasons; let best=null,bv=-1;
   for(const k in rs) if(rs[k]>bv){bv=rs[k];best=k;}
-  return best?REASON_KO[best]:'혐의는 없으나 어쩐지 수상함';
+  return best?REASON_KO[best]:'No charges, yet somehow suspicious';
 }
 function drawWake(dt){
   wakeAnimT+=dt;
@@ -1821,11 +1821,11 @@ function drawWake(dt){
   if(wakeAnimT<0.5) return;
   cx.textAlign='center';
   cx.font='900 54px sans-serif'; cx.fillStyle='#ff6b6b';
-  cx.fillText('LEVEL '+currentLevel+' 실패 · 부장님이 깨어났다',VW/2,150);
+  cx.fillText('LEVEL '+currentLevel+' FAILED · The Boss woke up',VW/2,150);
   cx.font='600 24px sans-serif'; cx.fillStyle='#ffd9a0';
   cx.fillText('"'+lastWakeLine+'"',VW/2,196);
   cx.font='bold 21px sans-serif'; cx.fillStyle='#dfe6ff';
-  cx.fillText('집까지 겨우 '+lastRemainM+'m 남기고…',VW/2,246);
+  cx.fillText('So close — '+lastRemainM+'m to go…',VW/2,246);
   // 과실 정산
   let f=faults.front.total, b=faults.back.total;
   if(f+b<1){ f=1; b=1.08; }
@@ -1834,76 +1834,76 @@ function drawWake(dt){
   cx.fillStyle='rgba(12,16,38,0.9)'; roundRect(bx0-40,by0-46,bw+80,240,16); cx.fill();
   cx.strokeStyle='#5a6488'; cx.stroke();
   cx.font='bold 20px sans-serif'; cx.fillStyle='#ffe9b8';
-  cx.fillText('─ 낙하 사고 과실 판정 ─',VW/2,by0-14);
+  cx.fillText('─ Fall Incident Fault Ruling ─',VW/2,by0-14);
   cx.fillStyle='#4f8ef7'; cx.fillRect(bx0,by0+10,bw*bp/100,34);
   cx.fillStyle='#3ec9a7'; cx.fillRect(bx0+bw*bp/100,by0+10,bw*fp/100,34);
   cx.font='900 22px sans-serif'; cx.fillStyle='#fff'; cx.textAlign='left';
-  cx.fillText('뒷사람 '+bp+'%',bx0+10,by0+34);
-  cx.textAlign='right'; cx.fillText(fp+'% 앞사람',bx0+bw-10,by0+34);
+  cx.fillText('Back '+bp+'%',bx0+10,by0+34);
+  cx.textAlign='right'; cx.fillText(fp+'% Front',bx0+bw-10,by0+34);
   cx.textAlign='center'; cx.font='15px sans-serif';
-  cx.fillStyle='#9fc3ff'; cx.fillText('뒷사람 주요 혐의: '+topReason('back'),VW/2,by0+80);
-  cx.fillStyle='#9fe8d6'; cx.fillText('앞사람 주요 혐의: '+topReason('front'),VW/2,by0+108);
+  cx.fillStyle='#9fc3ff'; cx.fillText('Back carrier main charge: '+topReason('back'),VW/2,by0+80);
+  cx.fillStyle='#9fe8d6'; cx.fillText('Front carrier main charge: '+topReason('front'),VW/2,by0+108);
   cx.fillStyle='#8b96c4'; cx.font='12px sans-serif';
-  cx.fillText('※ 본 판정에 대한 이의신청은 받지 않습니다.',VW/2,by0+140);
+  cx.fillText('※ No appeals will be accepted for this ruling.',VW/2,by0+140);
   cx.font='bold 19px sans-serif'; cx.fillStyle='#ffe9b8';
-  cx.fillText(TOUCH_UI?'상단 메뉴에서 계속 또는 LEVEL '+currentLevel+' 다시 시작':'R  체크포인트에서 계속     ·     T  LEVEL '+currentLevel+' 다시 시작',VW/2,by0+186);
+  cx.fillText(TOUCH_UI?'Use the top menu to continue or restart LEVEL '+currentLevel+' restart':'R  continue from checkpoint     ·     T  restart LEVEL '+currentLevel+' restart',VW/2,by0+186);
 }
 function reasonSummary(side){
   const es=Object.entries(faults[side].counts).sort((a,b)=>b[1]-a[1]).slice(0,3);
-  return es.length?es.map(([k,n])=>(REASON_KO[k]||k)+' ×'+n):['특이 혐의 없음'];
+  return es.length?es.map(([k,n])=>(REASON_KO[k]||k)+' ×'+n):['No notable charges'];
 }
 function drawClear(dt){
   clearT+=dt;
   cx.fillStyle='rgba(8,11,28,'+clamp(clearT*0.8,0,0.78)+')'; cx.fillRect(0,0,VW,VH);
   cx.textAlign='center';
   if(clearT>0.3&&clearT<2.7){ cx.font='900 32px sans-serif'; cx.fillStyle='#7dffa8'; cx.fillText('LEVEL '+currentLevel+' CLEAR',VW/2,150); }
-  if(clearT>1.0&&clearT<2.7){ cx.font='600 22px sans-serif'; cx.fillStyle='#dfe6ff'; cx.fillText(levelCfg.name+' 통과',VW/2,192); }
-  if(clearT>1.8&&clearT<2.7){ cx.font='600 19px sans-serif'; cx.fillStyle='#aeb9e6'; cx.fillText(campaignComplete?LEVELS.length+'개 레벨을 전부 살아남았습니다.':'다음 레벨은 더 어렵습니다.',VW/2,230); }
+  if(clearT>1.0&&clearT<2.7){ cx.font='600 22px sans-serif'; cx.fillStyle='#dfe6ff'; cx.fillText(levelCfg.name+' CLEAR',VW/2,192); }
+  if(clearT>1.8&&clearT<2.7){ cx.font='600 19px sans-serif'; cx.fillStyle='#aeb9e6'; cx.fillText(campaignComplete?LEVELS.length+' levels — you survived them all.':'The next level is harder.',VW/2,230); }
   if(clearT>2.7&&gradeInfo){
     if(!gradeInfo.stamped){ gradeInfo.stamped=true; sStamp(); setTimeout(sFanfa,300); }
     const pct=faultPercent();
     const accident=pct.front>=pct.back?'front':'back';
     const rescue=rescues.front.score===rescues.back.score?'team':rescues.front.score>rescues.back.score?'front':'back';
-    const roleName=s=>s==='front'?'앞사람':s==='back'?'뒷사람':'공동 수상';
+    const roleName=s=>s==='front'?'Front':s==='back'?'Back':'Shared award';
     const gc=gradeInfo.g==='S'?'#ffd45e':gradeInfo.g==='F'?'#ff6b6b':'#e2564b';
     cx.fillStyle='rgba(12,16,38,0.96)'; roundRect(100,56,1080,610,20); cx.fill();
     cx.strokeStyle='#5a6488'; cx.lineWidth=2; cx.stroke(); cx.lineWidth=1;
-    cx.font='900 28px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText(campaignComplete?'🏁 '+LEVELS.length+' LEVEL ALL CLEAR':'LEVEL '+currentLevel+' 귀가 보고서 · '+levelCfg.name,VW/2,96);
+    cx.font='900 28px sans-serif'; cx.fillStyle='#ffe9b8'; cx.fillText(campaignComplete?'🏁 '+LEVELS.length+' LEVEL ALL CLEAR':'LEVEL '+currentLevel+' Homecoming Report · '+levelCfg.name,VW/2,96);
     // 등급
     cx.save(); cx.translate(205,194); cx.rotate(-0.12); cx.strokeStyle=gc; cx.lineWidth=6;
     cx.beginPath(); cx.arc(0,0,65,0,7); cx.stroke(); cx.fillStyle=gc; cx.font='900 82px sans-serif'; cx.fillText(gradeInfo.g,0,29); cx.restore();
     cx.fillStyle='#dfe6ff'; cx.font='bold 16px sans-serif'; cx.fillText(gradeInfo.cap,205,286);
     // 사고왕
     cx.fillStyle='rgba(85,25,36,0.72)'; roundRect(330,126,360,238,14); cx.fill();
-    cx.font='900 21px sans-serif'; cx.fillStyle='#ff9292'; cx.fillText('🏆 오늘의 사고왕',510,162);
+    cx.font='900 21px sans-serif'; cx.fillStyle='#ff9292'; cx.fillText('🏆 Blunder MVP',510,162);
     cx.font='900 28px sans-serif'; cx.fillStyle='#fff'; cx.fillText(roleName(accident),510,202);
-    cx.font='bold 18px sans-serif'; cx.fillStyle='#ffd9a0'; cx.fillText('총 과실 '+pct[accident]+'%',510,234);
+    cx.font='bold 18px sans-serif'; cx.fillStyle='#ffd9a0'; cx.fillText('Total blame '+pct[accident]+'%',510,234);
     cx.textAlign='left'; cx.font='14px sans-serif'; cx.fillStyle='#eac8ca';
     reasonSummary(accident).forEach((l,i)=>cx.fillText('• '+l,374,272+i*27));
     // 구조왕
     cx.fillStyle='rgba(21,74,65,0.72)'; roundRect(714,126,360,238,14); cx.fill();
-    cx.textAlign='center'; cx.font='900 21px sans-serif'; cx.fillStyle='#7dffa8'; cx.fillText('🛟 오늘의 구조왕',894,162);
+    cx.textAlign='center'; cx.font='900 21px sans-serif'; cx.fillStyle='#7dffa8'; cx.fillText('🛟 Rescue MVP',894,162);
     cx.font='900 28px sans-serif'; cx.fillStyle='#fff'; cx.fillText(roleName(rescue),894,202);
     const rescueScore=rescue==='team'?clipScore:rescues[rescue].score;
-    cx.font='bold 18px sans-serif'; cx.fillStyle='#baffcd'; cx.fillText('구조 점수 '+rescueScore,894,234);
+    cx.font='bold 18px sans-serif'; cx.fillStyle='#baffcd'; cx.fillText('Rescue score '+rescueScore,894,234);
     cx.textAlign='left'; cx.font='14px sans-serif'; cx.fillStyle='#ccebdd';
     const rc=rescue==='team'?[]:Object.entries(rescues[rescue].counts).sort((a,b)=>b[1]-a[1]);
-    const rescueLines=rc.length?rc.map(([k,n])=>k+' ×'+n):['함께 만든 기적'];
-    if(rescue!=='team'&&soloHoldBest[rescue]>0.2) rescueLines.unshift('최장 단독 운반 '+soloHoldBest[rescue].toFixed(1)+'초');
+    const rescueLines=rc.length?rc.map(([k,n])=>k+' ×'+n):['Miracle Together'];
+    if(rescue!=='team'&&soloHoldBest[rescue]>0.2) rescueLines.unshift('Longest solo carry '+soloHoldBest[rescue].toFixed(1)+'s');
     rescueLines.slice(0,3).forEach((l,i)=>cx.fillText('• '+l,758,272+i*27));
     // 기록과 미션
     const mm=Math.floor(runTime/60),ss=Math.floor(runTime%60);
     cx.fillStyle='rgba(29,37,76,0.9)'; roundRect(150,398,930,164,14); cx.fill();
     cx.textAlign='left'; cx.font='bold 17px sans-serif'; cx.fillStyle='#dfe6ff';
-    cx.fillText('📊 기록',182,435); cx.font='15px sans-serif';
-    cx.fillText('배달 '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0')+'   ·   숙면도 '+Math.round(meter)+'% 생존   ·   소음 '+noiseCnt+'회   ·   기상 '+wakeCnt+'회',182,470);
-    cx.fillText('과실  뒷사람 '+pct.back+'% : '+pct.front+'% 앞사람   ·   클립 점수 '+clipScore+'   ·   수동 재정비 '+manualResetCnt+'회',182,500);
+    cx.fillText('📊 Stats',182,435); cx.font='15px sans-serif';
+    cx.fillText('Delivery '+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0')+'   ·   sleep '+Math.round(meter)+'% left   ·   Noise '+noiseCnt+'   ·   Wakes '+wakeCnt+'',182,470);
+    cx.fillText('Blame  Back '+pct.back+'% : '+pct.front+'% Front   ·   Clip score '+clipScore+'   ·   manual regroups '+manualResetCnt+'',182,500);
     cx.fillStyle=gradeInfo.missionOK?'#7dffa8':'#ff8d8d'; cx.font='bold 16px sans-serif';
-    cx.fillText((gradeInfo.missionOK?'✓ 미션 성공  ':'✕ 미션 실패  ')+mission.title+' — '+mission.desc,182,535);
+    cx.fillText((gradeInfo.missionOK?'✓ Mission complete  ':'✕ Mission failed  ')+mission.title+' — '+mission.desc,182,535);
     cx.textAlign='center'; cx.fillStyle='#ffd9a0'; cx.font='bold 19px sans-serif';
-    cx.fillText(campaignComplete?'월요일 출근 생존 확정. 전설이 되셨습니다.':'다음 관문: LEVEL '+(currentLevel+1)+' · '+LEVELS[currentLevel].name,VW/2,605);
+    cx.fillText(campaignComplete?'You’ll survive Monday. You’re a legend.':'Next gate: LEVEL '+(currentLevel+1)+' · '+LEVELS[currentLevel].name,VW/2,605);
     cx.fillStyle='#ffe9b8';
-    cx.fillText(TOUCH_UI?'상단 메뉴에서 다음 단계·다시하기·타이틀 선택':campaignComplete?'[T] LEVEL 1부터 다시      [Esc] 타이틀로':'[Enter] 다음 레벨      [T] 현재 레벨 다시      [Esc] 타이틀로',VW/2,638);
+    cx.fillText(TOUCH_UI?'Use the top menu: next / retry / title':campaignComplete?'[T] restart from LEVEL 1      [Esc] title':'[Enter] next level      [T] retry level      [Esc] title',VW/2,638);
   }
 }
 function drawPause(){
@@ -1911,7 +1911,7 @@ function drawPause(){
   cx.textAlign='center'; cx.font='900 44px sans-serif'; cx.fillStyle='#ffe9b8';
   cx.fillText('LEVEL '+currentLevel+' · '+levelCfg.name,VW/2,330);
   cx.font='17px sans-serif'; cx.fillStyle='#aeb9e6';
-  cx.fillText(TOUCH_UI?'상단 메뉴에서 계속·재정비·타이틀 선택':'P 계속 · R 체크포인트 재시작 · Esc 타이틀',VW/2,380);
+  cx.fillText(TOUCH_UI?'Use the top menu: resume / regroup / title':'P resume · R restart checkpoint · Esc title',VW/2,380);
 }
 
 /* ---------------- 화면 전환 입력 ---------------- */
@@ -1923,11 +1923,11 @@ function syncTouchMenu(){
   touchMenuSignature=sig;
   controls.classList.toggle('can-move',state==='play');
   let items=[];
-  if(state==='play') items=[['Ⅱ 일시정지','KeyP'],['↻ 재정비','KeyR'],[muted?'🔊 소리':'🔇 음소거','KeyM']];
-  else if(state==='pause') items=[['▶ 계속','KeyP'],['↻ 재정비','KeyR'],['⌂ 타이틀','Escape']];
-  else if(state==='wake') items=[['▶ 계속','KeyR'],['↻ 다시하기','KeyT'],['⌂ 타이틀','Escape']];
-  else if(state==='clear'&&!campaignComplete) items=[['다음 단계','Enter'],['↻ 다시하기','KeyT'],['⌂ 타이틀','Escape']];
-  else if(state==='clear') items=[['LEVEL 1부터','KeyT'],['⌂ 타이틀','Escape']];
+  if(state==='play') items=[['Ⅱ PAUSED','KeyP'],['↻ Regroup','KeyR'],[muted?'🔊 Sound':'🔇 Mute','KeyM']];
+  else if(state==='pause') items=[['▶ Resume','KeyP'],['↻ Regroup','KeyR'],['⌂ Title','Escape']];
+  else if(state==='wake') items=[['▶ Resume','KeyR'],['↻ Retry','KeyT'],['⌂ Title','Escape']];
+  else if(state==='clear'&&!campaignComplete) items=[['Next level','Enter'],['↻ Retry','KeyT'],['⌂ Title','Escape']];
+  else if(state==='clear') items=[['From LEVEL 1','KeyT'],['⌂ Title','Escape']];
   const menuBtns=[...menu.querySelectorAll('.touchBtn')];
   menuBtns.forEach((btn,i)=>{
     const item=items[i]; btn.hidden=!item;
@@ -1938,10 +1938,10 @@ function syncTouchMenu(){
 }
 function metaInput(){
   if(net.on&&!net.host&&state!=='title'){
-    // 온라인 게스트: 진행 제어는 방장 몸. 음소거/마이크/나가기만.
+    // 온라인 게스트: 진행 제어는 방장 몸. Mute/마이크/나가기만.
     if(pressed['KeyM']){ muted=!muted; if(master) master.gain.value=muted?0:0.5; }
     if(pressed['KeyV']) toggleMic();
-    if(pressed['Escape']){ toast('방에서 나감'); netLeave(); }
+    if(pressed['Escape']){ toast('Left the room'); netLeave(); }
     return;
   }
   if(state==='title'){
@@ -1955,11 +1955,11 @@ function metaInput(){
         if(clickPt.x>VW/2-145&&clickPt.x<VW/2+145) m='duo';
         if(clickPt.x>VW/2+165&&clickPt.x<VW/2+455&&!net.on){ openLobby(); clickPt=null; }
       }
-      if(clickPt&&clickPt.y>24&&clickPt.y<64&&clickPt.x>VW-170&&clickPt.x<VW-24){ location.href='./en.html'; }
+      if(clickPt&&clickPt.y>24&&clickPt.y<64&&clickPt.x>VW-170&&clickPt.x<VW-24){ location.href='./index.html'; }
     }
     if(m) startGame(m);
   } else if(state==='play'){
-    if(pressed['KeyR']){ manualResetCnt++; respawn(false); toast('체크포인트에서 재정비! 숙면도는 회복되지 않습니다'); }
+    if(pressed['KeyR']){ manualResetCnt++; respawn(false); toast('Regrouped at checkpoint! Sleep doesn’t recover'); }
     if(pressed['KeyP']||pressed['Escape']){ state='pause'; if(scrapeGain)scrapeGain.gain.value=0; }
   } else if(state==='pause'){
     if(pressed['KeyP']) state='play';
@@ -1980,14 +1980,14 @@ function metaInput(){
 /* ---------------- 메인 루프 ---------------- */
 let lastT=0, acc=0;
 carriers=[
-  new Carrier('back', 300,'#4f8ef7',KM_BACK,'뒷사람'),
-  new Carrier('front',450,'#3ec9a7',KM_FRONT,'앞사람')
+  new Carrier('back', 300,'#4f8ef7',KM_BACK,'Back'),
+  new Carrier('front',450,'#3ec9a7',KM_FRONT,'Front')
 ];
 resetBottles();
 { const f=carriers[1].anchor(), b=carriers[0].anchor(); buildBoss(f.x,f.y,b.x,b.y); }
 camX=0;
 
-/* ---------------- 온라인 협동 (Cloudflare Worker + Durable Object 중계) ----------------
+/* ---------------- 온라인 협 (Cloudflare Worker + Durable Object 중계) ----------------
    호스트 권위: 방장이 물리를 돌리고 게스트는 입력을 보내고 스냅샷(15Hz)을 받아 그린다. */
 const NET_CODES={
   front:['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','ShiftLeft','ShiftRight','KeyL'],
@@ -2022,11 +2022,11 @@ let lobbyRooms=[], lobbyPage=0, lobbyListNote='';
 async function refreshRooms(){
   if(lobbyEl('lobby').style.display!=='flex'||lobbyEl('lobbyRoom').style.display!=='none') return;
   const base=netHttpBase();
-  if(!base){ lobbyRooms=[]; lobbyListNote='서버 주소를 입력하면 방 목록이 표시됩니다'; renderRoomList(); return; }
+  if(!base){ lobbyRooms=[]; lobbyListNote='Enter a server address to see rooms'; renderRoomList(); return; }
   try{
     const r=await fetch(base+'/rooms'); const d=await r.json();
     lobbyRooms=d.rooms||[]; lobbyListNote='';
-  }catch(e){ lobbyRooms=[]; lobbyListNote='방 목록을 불러올 수 없습니다 — 서버 주소를 확인하세요'; }
+  }catch(e){ lobbyRooms=[]; lobbyListNote='Can’t load rooms — check the server address'; }
   renderRoomList();
 }
 function renderRoomList(){
@@ -2038,12 +2038,12 @@ function renderRoomList(){
   if(lobbyPage<0) lobbyPage=0;
   const slice=lobbyRooms.slice(lobbyPage*LOBBY_PER_PAGE,(lobbyPage+1)*LOBBY_PER_PAGE);
   let html=slice.map(rm=>
-    '<div class="pRow roomRow"><span class="rn">'+escHtml(rm.name||('부장님 운반조 '+rm.code))+'</span>'+
+    '<div class="pRow roomRow"><span class="rn">'+escHtml(rm.name||('Boss Carry Crew '+rm.code))+'</span>'+
     '<span class="rc">'+rm.players+'/2</span>'+
-    '<button class="lbtn" data-code="'+rm.code+'">입장</button></div>').join('');
-  const emptyMsg=lobbyListNote||(n===0&&lobbyPage===0?'열린 방이 없습니다 — 첫 방을 만들어보세요!':'빈 방');
+    '<button class="lbtn" data-code="'+rm.code+'">Join</button></div>').join('');
+  const emptyMsg=lobbyListNote||(n===0&&lobbyPage===0?'No open rooms — create the first one!':'Empty slot');
   for(let i=slice.length;i<LOBBY_PER_PAGE;i++)
-    html+='<div class="pRow roomRow empty"><span class="rn">'+(i===slice.length?escHtml(emptyMsg):'빈 방')+'</span></div>';
+    html+='<div class="pRow roomRow empty"><span class="rn">'+(i===slice.length?escHtml(emptyMsg):'Empty slot')+'</span></div>';
   list.innerHTML=html;
   for(const b of list.querySelectorAll('button[data-code]'))
     b.onclick=()=>{ localStorage.setItem('ddh_ws',lobbyEl('wsUrl').value.trim()); netConnect(b.dataset.code); };
@@ -2053,28 +2053,28 @@ function renderRoomList(){
     b.onclick=()=>{ lobbyPage=+b.dataset.pg; renderRoomList(); };
 }
 async function netCreateRoom(){
-  const base=netHttpBase(); if(!base){ lobbyMsg('서버 주소를 먼저 입력하세요 (wss://…workers.dev)',1); return; }
+  const base=netHttpBase(); if(!base){ lobbyMsg('Enter the server address first (wss://…workers.dev)',1); return; }
   localStorage.setItem('ddh_ws',lobbyEl('wsUrl').value.trim());
-  lobbyMsg('방 만드는 중…');
+  lobbyMsg('Creating room…');
   try{ const r=await fetch(base+'/new'); const d=await r.json();
     netConnect(d.code,(lobbyEl('roomName').value||'').trim()); }
-  catch(e){ lobbyMsg('서버에 연결할 수 없습니다: '+e.message,1); }
+  catch(e){ lobbyMsg('Can’t reach the server: '+e.message,1); }
 }
 function netConnect(code,roomName){
   netDisconnect();
-  lobbyMsg('접속 중…');
+  lobbyMsg('Connecting…');
   let ws;
   try{ ws=new WebSocket(netWsBase()+'/ws/'+code+(roomName?('?name='+encodeURIComponent(roomName.slice(0,20))):'')); }
-  catch(e){ lobbyMsg('주소가 올바르지 않습니다',1); return; }
+  catch(e){ lobbyMsg('Invalid address',1); return; }
   net.ws=ws; net.code=code;
   ws.onopen=()=>{ lobbyEl('lobbySetup').style.display='none'; lobbyEl('lobbyRoom').style.display='block';
-    lobbyEl('codeShow').textContent=roomName||''; lobbyMsg('접속됨 · 상대를 기다리는 중'); };
+    lobbyEl('codeShow').textContent=roomName||''; lobbyMsg('Connected · waiting for a partner'); };
   ws.onmessage=netMsg;
   ws.onclose=()=>{ net.ws=null;
     if(net.on){ onPeerGone('conn'); }
     else if(lobbyEl('lobby').style.display==='flex'){ lobbyEl('lobbySetup').style.display='block';
-      lobbyEl('lobbyRoom').style.display='none'; lobbyMsg('연결이 끊어졌습니다',1); refreshRooms(); } };
-  ws.onerror=()=>lobbyMsg('접속 실패 — 서버 주소와 방 코드를 확인하세요',1);
+      lobbyEl('lobbyRoom').style.display='none'; lobbyMsg('Connection lost',1); refreshRooms(); } };
+  ws.onerror=()=>lobbyMsg('Connection failed — check the server address',1);
 }
 function netDisconnect(){
   if(net.ws){ const w=net.ws; net.ws=null; try{ w.onclose=null; w.close(); }catch(_){} }
@@ -2094,7 +2094,7 @@ function netMsg(e){
     closeLobby(); netBegin(d.level||1,d.mi|0);
   } else if(d.t==='peer_left'){
     if(net.on) onPeerGone('peer');
-    else lobbyMsg('상대가 나갔습니다 — 대기 중…',1);
+    else lobbyMsg('Partner left — waiting…',1);
   } else if(d.t==='relay'){
     if(d.i){ if(net.host&&net.on){ net._inj=true; setInput(d.i[0],!!d.i[1]); net._inj=false; } }
     else if(d.s){ if(!net.host) net.snap=d.s; }
@@ -2102,11 +2102,11 @@ function netMsg(e){
   }
 }
 function renderLobby(d){
-  const roleName=r=>r==='front'?'🟩 앞사람':r==='back'?'🟦 뒷사람':'역할 미정';
+  const roleName=r=>r==='front'?'🟩 Front':r==='back'?'🟦 Back':'no role yet';
   if(d.name) lobbyEl('codeShow').textContent=d.name;
   lobbyEl('playersBox').innerHTML=d.players.map(p=>
-    '<div class="pRow">'+(p.host?'👑 ':'')+'플레이어 '+p.id+(p.id===d.you?' (나)':'')+' — '+roleName(p.role)+'</div>').join('')
-    +(d.players.length<2?'<div class="pRow dim">상대 대기 중… 로비 목록에 이 방이 공개되어 있습니다</div>':'');
+    '<div class="pRow">'+(p.host?'👑 ':'')+'Player '+p.id+(p.id===d.you?' (you)':'')+' — '+roleName(p.role)+'</div>').join('')
+    +(d.players.length<2?'<div class="pRow dim">Waiting for a partner… this room is listed in the public lobby</div>':'');
   net.peerHere=d.players.length===2;
   const other=d.players.find(p=>p.id!==d.you);
   lobbyEl('roleBack').disabled=!!(other&&other.role==='back');
@@ -2117,8 +2117,8 @@ function renderLobby(d){
   const sb=lobbyEl('btnStart');
   sb.style.display=net.host?'block':'none';
   sb.disabled=!ready;
-  sb.textContent=ready?'게임 시작':'2명이 역할을 고르면 시작';
-  if(!net.host) lobbyMsg(net.peerHere?(ready?'방장이 시작하길 기다리는 중…':'역할을 선택하세요'):'대기 중…');
+  sb.textContent=ready?'Start game':'Start when both pick roles';
+  if(!net.host) lobbyMsg(net.peerHere?(ready?'Waiting for the host to start…':'Pick your role'):'Waiting…');
 }
 function netBegin(level,mi){
   hideDropModal();
@@ -2128,7 +2128,7 @@ function netBegin(level,mi){
   mode='duo'; campaignComplete=false;
   startLevel(level);
   mission=MISSIONS[mi%MISSIONS.length];
-  toast(net.host?'🌐 온라인 협동 시작 — 나는 '+(net.role==='front'?'앞사람':'뒷사람')+' (방장)':'🌐 온라인 협동 시작 — 나는 '+(net.role==='front'?'앞사람':'뒷사람'));
+  toast(net.host?'🌐 Online co-op — I’m the '+(net.role==='front'?'Front':'Back')+' (host)':'🌐 Online co-op — I’m the '+(net.role==='front'?'Front':'Back'));
 }
 const nr1=v=>Math.round(v*10)/10;
 function netSnapshot(){
@@ -2178,10 +2178,10 @@ function onPeerGone(why){
   net.host=true;             // 서버가 남은 쪽을 방장으로 승격
   net.snap=null;
   if(state==='play') state='pause';
-  toast(why==='conn'?'🔌 서버와 연결이 끊어졌습니다':'👋 상대방이 게임을 이탈했습니다');
+  toast(why==='conn'?'🔌 Lost connection to the server':'👋 Your partner left the game');
   lobbyEl('dropDesc').textContent=why==='conn'
-    ?'서버와의 연결이 끊어졌습니다. 진행 상황은 그대로 남아 있습니다.'
-    :'진행 상황은 그대로 남아 있습니다. 어떻게 할까요?';
+    ?'Lost connection to the server. Your progress is intact.'
+    :'Your progress is intact. What now?';
   lobbyEl('dropWait').style.display=(why==='conn'||!net.ws)?'none':'block';
   lobbyEl('dropModal').style.display='flex';
 }
@@ -2191,7 +2191,7 @@ lobbyEl('dropSolo').onclick=()=>{
   // 이어받기 보정: 이벤트 타이머를 현재 시각 기준으로 재설정
   nextStir=runTime+rnd(10,18)*diff.stir;
   eyeOpen.active=false; eyeOpen.next=runTime+rnd(12,18);
-  toast('🕹 혼자 이어하기 — 왼손 뒷사람(WASD+F), 오른손 앞사람(방향키+Shift/L)');
+  toast('🕹 Continuing solo — left hand Back (WASD+F), right hand Front (Arrows+Shift/L)');
   state='play';
 };
 lobbyEl('dropWait').onclick=()=>{
@@ -2200,7 +2200,7 @@ lobbyEl('dropWait').onclick=()=>{
   lobbyEl('lobby').style.display='flex';
   lobbyEl('lobbySetup').style.display='none';
   lobbyEl('lobbyRoom').style.display='block';
-  lobbyMsg('방이 다시 공개되었습니다 — 새 상대를 기다리는 중 (시작하면 LEVEL '+currentLevel+'부터)');
+  lobbyMsg('Room relisted — waiting for a new partner (restart begins at LEVEL '+currentLevel+')');
 };
 lobbyEl('dropTitle').onclick=()=>{ hideDropModal(); netLeave(); };
 function netTick(rdt){
@@ -2239,7 +2239,7 @@ function frame(t){
     metaInput();
     if(state==='play'){ if(!(net.on&&!net.host)) update(FDT); }
     else if(state==='title'){
-      // 타이틀 뒤에서 부장님이 살아있는 물리로 잠자는 데모
+      // Title 뒤에서 부장님이 살아있는 물리로 잠자는 데모
       for(let s=0;s<SUB;s++) stepBossPhysics();
       snoreT+=FDT; if(snoreT>2.3){snoreT=0; sSnore(); spawnP('z',boss.pts.head.x,boss.pts.head.y-20);}
       for(const p of particles){p.t+=FDT; p.x+=p.vx*FDT; p.y+=p.vy*FDT;}
