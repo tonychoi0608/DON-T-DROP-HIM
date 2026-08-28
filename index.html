@@ -73,7 +73,7 @@
   #onlineBtn:hover{background:rgba(52,44,110,.95)}
   #lobby{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
     background:rgba(5,8,20,.78);backdrop-filter:blur(3px)}
-  #lobbyCard{width:min(620px,94vw);max-height:92vh;overflow:auto;background:#141a36;border:1px solid #39415c;
+  #lobbyCard{width:min(940px,96vw);max-height:92vh;overflow:auto;background:#141a36;border:1px solid #39415c;
     border-radius:16px;padding:22px;color:#dfe6ff;font:500 14px/1.5 system-ui;box-shadow:0 10px 40px rgba(0,0,0,.5)}
   #lobbyCard h2{margin:0 0 14px;font-size:19px}
   #lobbyCard label{display:block;margin:0 0 4px;font-size:12px;color:#8b96c4}
@@ -91,7 +91,7 @@
   .pRow{padding:7px 10px;background:#0c1128;border-radius:8px;margin:0 0 6px;font-weight:700}
   .pRow.dim{color:#8b96c4;font-weight:500}
   #lobbyMsg{min-height:20px;margin:8px 0 0;font-size:13px;color:#9fe8b6}
-  #roomList{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:0 0 8px}
+  #roomList{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:0 0 8px}
   .roomRow{display:flex;align-items:center;gap:8px;margin:0;padding:6px 10px;min-height:24px}
   .roomRow .rn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
   .roomRow .rc{color:#8b96c4;font-size:11px;font-weight:500;flex:0 0 auto}
@@ -102,6 +102,7 @@
   .pgBtn{min-width:32px;height:30px;border-radius:8px;border:1px solid #39415c;background:#0c1128;
     color:#8b96c4;font:800 13px/1 system-ui;cursor:pointer}
   .pgBtn.cur{background:#4a3df0;border-color:#6a5dff;color:#fff}
+  @media (max-width:900px){ #roomList{grid-template-columns:1fr 1fr} }
   @media (max-width:560px){ #roomList{grid-template-columns:1fr} }
 </style>
 <div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
