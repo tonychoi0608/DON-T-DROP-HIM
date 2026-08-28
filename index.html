@@ -101,7 +101,7 @@ const rnd   = (a,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
 const dist2 = (ax,ay,bx,by)=>{const dx=ax-bx,dy=ay-by;return Math.sqrt(dx*dx+dy*dy)};
 const DEBUG = location.search.indexOf('debug')>=0;
 const TOUCH_UI = (window.matchMedia&&matchMedia('(pointer: coarse)').matches)||location.search.indexOf('touch')>=0;
-const CAM_YUP = TOUCH_UI?72:0; // 터치 UI에서 월드를 위로 올려 하단 버튼과 겹침 방지
+const CAM_YUP = TOUCH_UI?100:0; // 터치 UI에서 월드를 위로 올려 하단 버튼과 겹침 방지
 document.body.classList.toggle('touch',TOUCH_UI);
 
 /* ---------------- 입력 ---------------- */
@@ -471,7 +471,7 @@ function buildLevelWorld(level){
   const R=activeMap.recipe;
   WORLD=activeMap.length; GOAL_CX=activeMap.goalCenter; GOAL_X0=activeMap.goalX0; GOAL_X1=activeMap.goalX1;
   CHECKPOINTS=activeMap.checkpoints;
-  solids.length=0; box(-300,G_Y,WORLD+600,240,'ground');
+  solids.length=0; box(-300,G_Y,WORLD+600,320,'ground');
   const reserved=[
     [0,620],[GOAL_X0-400,WORLD],
     ...CHECKPOINTS.slice(1).map(cp=>[cp.x-120,cp.x+170]),
