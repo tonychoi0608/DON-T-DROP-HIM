@@ -185,7 +185,7 @@ export class LobbyDO {
     for (const c in this.rooms)
       if (now - this.rooms[c].at > 90000) { delete this.rooms[c]; dirty = true; }
     if (dirty) await this.ctx.storage.put('rooms', this.rooms);
-    const list = Object.values(this.rooms).sort((a, b) => b.at - a.at).slice(0, 30);
+    const list = Object.values(this.rooms).sort((a, b) => b.at - a.at).slice(0, 200);
     return new Response(JSON.stringify({ rooms: list }), {
       headers: { 'content-type': 'application/json', ...CORS },
     });
