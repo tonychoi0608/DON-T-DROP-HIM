@@ -65,6 +65,7 @@ T = {
   '방 목록을 불러올 수 없습니다 — 서버 주소를 확인하세요': "Can’t load rooms — check the server address",
   '서버 주소를 먼저 입력하세요 (wss://…workers.dev)': 'Enter the server address first (wss://…workers.dev)',
   '방 만드는 중…': 'Creating room…',
+  '서버에 연결할 수 없습니다 — 잠시 후 다시 시도해주세요': 'Cannot reach the server — try again shortly',
   '서버에 연결할 수 없습니다: ': "Can’t reach the server: ",
   '주소가 올바르지 않습니다': 'Invalid address',
   '접속 중…': 'Connecting…',
