@@ -91,6 +91,11 @@
   .pRow{padding:7px 10px;background:#0c1128;border-radius:8px;margin:0 0 6px;font-weight:700}
   .pRow.dim{color:#8b96c4;font-weight:500}
   #lobbyMsg{min-height:20px;margin:8px 0 0;font-size:13px;color:#9fe8b6}
+  #roomList{max-height:200px;overflow:auto;margin:0 0 4px}
+  .roomRow{display:flex;align-items:center;gap:10px}
+  .roomRow .rn{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .roomRow .rc{color:#8b96c4;font-size:12px;font-weight:500;flex:0 0 auto}
+  .roomRow .lbtn{flex:0 0 auto;padding:8px 16px}
 </style>
 <div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
 <div id="touchControls" aria-label="모바일 게임 조작부">
@@ -124,8 +129,9 @@
     <div id="lobbySetup">
       <label>중계 서버 주소 (Cloudflare Worker)</label>
       <input id="wsUrl" placeholder="wss://dont-drop-him-online.계정명.workers.dev" autocomplete="off" spellcheck="false">
-      <div class="lrow"><button id="btnMake" class="lbtn main">방 만들기</button></div>
-      <div class="lrow"><input id="roomCode" placeholder="방 코드" maxlength="8" autocomplete="off" spellcheck="false"><button id="btnJoin" class="lbtn">입장</button></div>
+      <div class="lrow"><input id="roomName" placeholder="방 이름 (예: 부장님 구조대)" maxlength="20" autocomplete="off"><button id="btnMake" class="lbtn" style="flex:0 0 auto">방 만들기</button></div>
+      <label>열린 방 목록 <span id="roomListState" style="color:#8b96c4"></span></label>
+      <div id="roomList"><div class="pRow dim">서버 주소를 입력하면 방 목록이 표시됩니다</div></div>
     </div>
     <div id="lobbyRoom" style="display:none">
       <div id="codeShow"></div>
@@ -1977,36 +1983,56 @@ function netServerUrl(){
 function netHttpBase(){ const v=netServerUrl(); return v?v.replace(/^ws/,'http'):null; }
 function netWsBase(){ const v=netServerUrl(); return v?v.replace(/^http/,'ws'):null; }
 function lobbyMsg(m,bad){ const e=lobbyEl('lobbyMsg'); e.textContent=m||''; e.style.color=bad?'#ff8d8d':'#9fe8b6'; }
-function openLobby(){ lobbyEl('lobby').style.display='flex'; lobbyEl('wsUrl').value=localStorage.getItem('ddh_ws')||''; }
-function closeLobby(){ lobbyEl('lobby').style.display='none'; }
+let lobbyPoll=null;
+function openLobby(){
+  lobbyEl('lobby').style.display='flex';
+  lobbyEl('wsUrl').value=localStorage.getItem('ddh_ws')||'';
+  startLobbyPoll();
+}
+function closeLobby(){ lobbyEl('lobby').style.display='none'; stopLobbyPoll(); }
+function startLobbyPoll(){ stopLobbyPoll(); refreshRooms(); lobbyPoll=setInterval(refreshRooms,3000); }
+function stopLobbyPoll(){ if(lobbyPoll){ clearInterval(lobbyPoll); lobbyPoll=null; } }
+const escHtml=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function refreshRooms(){
+  if(lobbyEl('lobby').style.display!=='flex'||lobbyEl('lobbyRoom').style.display!=='none') return;
+  const base=netHttpBase(), list=lobbyEl('roomList');
+  if(!base){ list.innerHTML='<div class="pRow dim">서버 주소를 입력하면 방 목록이 표시됩니다</div>'; return; }
+  try{
+    const r=await fetch(base+'/rooms'); const d=await r.json();
+    lobbyEl('roomListState').textContent='('+(d.rooms?d.rooms.length:0)+')';
+    if(!d.rooms||!d.rooms.length){
+      list.innerHTML='<div class="pRow dim">열린 방이 없습니다 — 첫 방을 만들어보세요!</div>'; return;
+    }
+    list.innerHTML=d.rooms.map(rm=>
+      '<div class="pRow roomRow"><span class="rn">'+escHtml(rm.name||('부장님 운반조 '+rm.code))+'</span>'+
+      '<span class="rc">'+rm.players+'/2</span>'+
+      '<button class="lbtn" data-code="'+rm.code+'">입장</button></div>').join('');
+    for(const b of list.querySelectorAll('button[data-code]'))
+      b.onclick=()=>{ localStorage.setItem('ddh_ws',lobbyEl('wsUrl').value.trim()); netConnect(b.dataset.code); };
+  }catch(e){ list.innerHTML='<div class="pRow dim">방 목록을 불러올 수 없습니다 — 서버 주소를 확인하세요</div>'; }
+}
 async function netCreateRoom(){
   const base=netHttpBase(); if(!base){ lobbyMsg('서버 주소를 먼저 입력하세요 (wss://…workers.dev)',1); return; }
   localStorage.setItem('ddh_ws',lobbyEl('wsUrl').value.trim());
   lobbyMsg('방 만드는 중…');
-  try{ const r=await fetch(base+'/new'); const d=await r.json(); netConnect(d.code); }
+  try{ const r=await fetch(base+'/new'); const d=await r.json();
+    netConnect(d.code,(lobbyEl('roomName').value||'').trim()); }
   catch(e){ lobbyMsg('서버에 연결할 수 없습니다: '+e.message,1); }
 }
-function netJoinRoom(){
-  const code=(lobbyEl('roomCode').value||'').trim().toUpperCase();
-  if(code.length<4){ lobbyMsg('방 코드를 입력하세요',1); return; }
-  if(!netWsBase()){ lobbyMsg('서버 주소를 먼저 입력하세요',1); return; }
-  localStorage.setItem('ddh_ws',lobbyEl('wsUrl').value.trim());
-  netConnect(code);
-}
-function netConnect(code){
+function netConnect(code,roomName){
   netDisconnect();
-  lobbyMsg('접속 중… ('+code+')');
+  lobbyMsg('접속 중…');
   let ws;
-  try{ ws=new WebSocket(netWsBase()+'/ws/'+code); }
+  try{ ws=new WebSocket(netWsBase()+'/ws/'+code+(roomName?('?name='+encodeURIComponent(roomName.slice(0,20))):'')); }
   catch(e){ lobbyMsg('주소가 올바르지 않습니다',1); return; }
   net.ws=ws; net.code=code;
   ws.onopen=()=>{ lobbyEl('lobbySetup').style.display='none'; lobbyEl('lobbyRoom').style.display='block';
-    lobbyEl('codeShow').textContent=code; lobbyMsg('접속됨 · 친구에게 코드를 알려주세요'); };
+    lobbyEl('codeShow').textContent=roomName||''; lobbyMsg('접속됨 · 상대를 기다리는 중'); };
   ws.onmessage=netMsg;
   ws.onclose=()=>{ net.ws=null;
     if(net.on){ toast('🔌 연결이 끊어졌습니다'); netLeave(); }
     else if(lobbyEl('lobby').style.display==='flex'){ lobbyEl('lobbySetup').style.display='block';
-      lobbyEl('lobbyRoom').style.display='none'; lobbyMsg('연결이 끊어졌습니다',1); } };
+      lobbyEl('lobbyRoom').style.display='none'; lobbyMsg('연결이 끊어졌습니다',1); refreshRooms(); } };
   ws.onerror=()=>lobbyMsg('접속 실패 — 서버 주소와 방 코드를 확인하세요',1);
 }
 function netDisconnect(){
@@ -2036,9 +2062,10 @@ function netMsg(e){
 }
 function renderLobby(d){
   const roleName=r=>r==='front'?'🟩 앞사람':r==='back'?'🟦 뒷사람':'역할 미정';
+  if(d.name) lobbyEl('codeShow').textContent=d.name;
   lobbyEl('playersBox').innerHTML=d.players.map(p=>
     '<div class="pRow">'+(p.host?'👑 ':'')+'플레이어 '+p.id+(p.id===d.you?' (나)':'')+' — '+roleName(p.role)+'</div>').join('')
-    +(d.players.length<2?'<div class="pRow dim">상대 대기 중… 방 코드: '+net.code+'</div>':'');
+    +(d.players.length<2?'<div class="pRow dim">상대 대기 중… 로비 목록에 이 방이 공개되어 있습니다</div>':'');
   net.peerHere=d.players.length===2;
   const other=d.players.find(p=>p.id!==d.you);
   lobbyEl('roleBack').disabled=!!(other&&other.role==='back');
@@ -2123,14 +2150,14 @@ const __startLevel=startLevel;
 startLevel=function(l){ net._lvl=true; __startLevel(l); net._lvl=false; };
 /* 로비 이벤트 바인딩 */
 lobbyEl('btnMake').onclick=netCreateRoom;
-lobbyEl('btnJoin').onclick=netJoinRoom;
-lobbyEl('roomCode').addEventListener('keydown',e=>{ if(e.key==='Enter') netJoinRoom(); e.stopPropagation(); });
+lobbyEl('roomName').addEventListener('keydown',e=>{ if(e.key==='Enter') netCreateRoom(); e.stopPropagation(); });
 lobbyEl('wsUrl').addEventListener('keydown',e=>e.stopPropagation());
 lobbyEl('roleBack').onclick=()=>netSend({t:'role',role:'back'});
 lobbyEl('roleFront').onclick=()=>netSend({t:'role',role:'front'});
 lobbyEl('btnStart').onclick=()=>netSend({t:'start',level:1,mi:(Math.random()*MISSIONS.length)|0});
 lobbyEl('btnLeave').onclick=()=>{ netDisconnect(); closeLobby();
   lobbyEl('lobbySetup').style.display='block'; lobbyEl('lobbyRoom').style.display='none'; lobbyMsg(''); };
+lobbyEl('lobby').addEventListener('click',e=>{ if(e.target===lobbyEl('lobby')){} });
 document.getElementById('onlineBtn').onclick=openLobby;
 
 function frame(t){
