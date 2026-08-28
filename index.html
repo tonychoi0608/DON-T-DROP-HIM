@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.6.2</title>
+<title>부장님이 잠드셨다 v0.6.3</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -16,13 +16,22 @@
   #touchControls.can-move .controlSide{visibility:visible;opacity:1}
   .controlSide.back{left:max(8px,env(safe-area-inset-left))}
   .controlSide.front{right:max(8px,env(safe-area-inset-right));flex-direction:row-reverse}
-  .pad{position:relative;width:158px;height:106px;pointer-events:none}
+  .stick{position:relative;width:128px;height:128px;border-radius:50%;pointer-events:auto;touch-action:none;
+    background:rgba(20,28,62,.55);border:2px solid rgba(223,230,255,.35);
+    box-shadow:0 4px 14px rgba(0,0,0,.35);-webkit-tap-highlight-color:transparent}
+  .stickKnob{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;
+    background:rgba(92,112,190,.92);box-shadow:0 3px 10px rgba(0,0,0,.4);pointer-events:none}
+  .stick.active{border-color:rgba(255,255,255,.65)}
+  .sa{position:absolute;color:rgba(223,230,255,.45);font:800 13px/1 system-ui;pointer-events:none}
+  .saL{left:8px;top:50%;transform:translateY(-50%)}.saR{right:8px;top:50%;transform:translateY(-50%)}
+  .saU{top:7px;left:50%;transform:translateX(-50%)}.saD{bottom:7px;left:50%;transform:translateX(-50%)}
+  .back .stick{border-color:rgba(79,142,247,.75)}.back .stickKnob{background:rgba(44,83,153,.95)}
+  .front .stick{border-color:rgba(62,201,167,.75)}.front .stickKnob{background:rgba(28,126,103,.95)}
   .touchBtn{position:absolute;width:50px;height:50px;border:1px solid rgba(223,230,255,.4);
     border-radius:14px;background:rgba(20,28,62,.78);color:#fff;font:800 20px/1 system-ui;
     box-shadow:0 4px 12px rgba(0,0,0,.3);pointer-events:auto;touch-action:none;
     -webkit-tap-highlight-color:transparent}
   .touchBtn:active,.touchBtn.active{transform:scale(.94);background:rgba(92,112,190,.9)}
-  .pad .up{left:54px;top:0}.pad .left{left:0;bottom:0}.pad .down{left:54px;bottom:0}.pad .right{right:0;bottom:0}
   .gripBtn{position:relative;width:62px;height:62px;border-radius:50%;font-size:13px;line-height:1.15}
   .back .touchBtn{border-color:rgba(79,142,247,.75)}
   .front .touchBtn{border-color:rgba(62,201,167,.75)}
@@ -43,14 +52,14 @@
     body.touch canvas{width:100vw;max-height:none}
     body.touch #rotateHint{display:block}
     body.touch #touchMenu{top:auto;bottom:112px}
-    body.touch .pad{width:108px;height:74px}
+    body.touch .stick{width:94px;height:94px}
+    body.touch .stickKnob{width:42px;height:42px;margin:-21px 0 0 -21px}
     body.touch .touchBtn{width:34px;height:34px;border-radius:10px;font-size:14px}
-    body.touch .pad .up,body.touch .pad .down{left:37px}
     body.touch .gripBtn{width:42px;height:42px;font-size:10px}
   }
   @media (max-width:700px){
-    .pad{width:134px;height:90px}.touchBtn{width:42px;height:42px;border-radius:12px;font-size:17px}
-    .pad .up{left:46px}.pad .down{left:46px}.gripBtn{width:52px;height:52px;font-size:11px}
+    .stick{width:110px;height:110px}.stickKnob{width:48px;height:48px;margin:-24px 0 0 -24px}
+    .touchBtn{width:42px;height:42px;border-radius:12px;font-size:17px}.gripBtn{width:52px;height:52px;font-size:11px}
   }
 </style>
 <div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
@@ -58,21 +67,17 @@
   <div id="rotateHint">📱 가로로 돌리면 더 편하게 플레이할 수 있습니다</div>
   <div class="controlSide back">
     <span class="sideLabel">🟦 뒷사람</span>
-    <div class="pad">
-      <button class="touchBtn up" data-code="KeyW" aria-label="뒷사람 점프">▲</button>
-      <button class="touchBtn left" data-code="KeyA" aria-label="뒷사람 왼쪽">◀</button>
-      <button class="touchBtn down" data-code="KeyS" aria-label="뒷사람 숙이기">▼</button>
-      <button class="touchBtn right" data-code="KeyD" aria-label="뒷사람 오른쪽">▶</button>
+    <div class="stick" aria-label="뒷사람 스틱: 밀어서 이동, 위로 점프, 아래로 숙이기">
+      <span class="sa saL">◀</span><span class="sa saR">▶</span><span class="sa saU">▲</span><span class="sa saD">▼</span>
+      <div class="stickKnob"></div>
     </div>
     <button class="touchBtn gripBtn" data-code="KeyF" aria-label="뒷사람 그립">그립</button>
   </div>
   <div class="controlSide front">
     <span class="sideLabel">🟩 앞사람</span>
-    <div class="pad">
-      <button class="touchBtn up" data-code="ArrowUp" aria-label="앞사람 점프">▲</button>
-      <button class="touchBtn left" data-code="ArrowLeft" aria-label="앞사람 왼쪽">◀</button>
-      <button class="touchBtn down" data-code="ArrowDown" aria-label="앞사람 숙이기">▼</button>
-      <button class="touchBtn right" data-code="ArrowRight" aria-label="앞사람 오른쪽">▶</button>
+    <div class="stick" aria-label="앞사람 스틱: 밀어서 이동, 위로 점프, 아래로 숙이기">
+      <span class="sa saL">◀</span><span class="sa saR">▶</span><span class="sa saU">▲</span><span class="sa saD">▼</span>
+      <div class="stickKnob"></div>
     </div>
     <button class="touchBtn gripBtn" data-code="KeyL" aria-label="앞사람 그립">그립</button>
   </div>
@@ -85,7 +90,7 @@
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.2
+   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.3
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -161,9 +166,59 @@ if(TOUCH_UI){
   window.addEventListener('pointercancel',e=>releaseVirtualContact('p'+e.pointerId));
   window.addEventListener('contextmenu',e=>e.preventDefault());
 }
+/* ---------------- 조그다이얼 가상 스틱: 한 손가락으로 이동·점프·숙이기 ---------------- */
+const stickResets=[];
+if(TOUCH_UI){
+  const nativeTouch=('ontouchstart' in window)||(navigator.maxTouchPoints||0)>0;
+  for(const el of document.querySelectorAll('.stick')){
+    const isBack=el.closest('.controlSide').classList.contains('back');
+    const codes=isBack?{L:'KeyA',R:'KeyD',U:'KeyW',D:'KeyS'}:{L:'ArrowLeft',R:'ArrowRight',U:'ArrowUp',D:'ArrowDown'};
+    const knob=el.querySelector('.stickKnob');
+    let pid=null,cx0=0,cy0=0,rad=56;
+    const st={L:false,R:false,U:false,D:false};
+    const apply=(nx,ny)=>{
+      const on={L:nx<-0.30,R:nx>0.30,U:ny<-0.38,D:ny>0.42};
+      for(const k in on) if(on[k]!==st[k]){ st[k]=on[k]; setInput(codes[k],on[k]); }
+      knob.style.transform='translate('+Math.round(nx*rad*0.55)+'px,'+Math.round(ny*rad*0.55)+'px)';
+    };
+    const reset=()=>{ pid=null; el.classList.remove('active'); apply(0,0); };
+    stickResets.push(reset);
+    const down=(id,x,y)=>{
+      if(pid!==null) return;
+      const r=el.getBoundingClientRect(); rad=r.width/2; cx0=r.left+rad; cy0=r.top+r.height/2;
+      pid=id; el.classList.add('active'); ensureAudio(); mv(id,x,y);
+    };
+    const mv=(id,x,y)=>{
+      if(pid!==id) return;
+      let dx=(x-cx0)/rad, dy=(y-cy0)/rad;
+      const d=Math.hypot(dx,dy);
+      if(d>1){ dx/=d; dy/=d; }
+      apply(dx,dy);
+    };
+    const up=id=>{ if(pid===id) reset(); };
+    el.addEventListener('touchstart',e=>{ e.preventDefault(); const t=e.changedTouches[0]; down('t'+t.identifier,t.clientX,t.clientY); },{passive:false});
+    window.addEventListener('touchmove',e=>{
+      let ours=false;
+      for(const t of e.changedTouches) if(pid==='t'+t.identifier){ ours=true; mv('t'+t.identifier,t.clientX,t.clientY); }
+      if(ours) e.preventDefault();
+    },{passive:false});
+    window.addEventListener('touchend',e=>{ for(const t of e.changedTouches) up('t'+t.identifier); },{passive:false});
+    window.addEventListener('touchcancel',e=>{ for(const t of e.changedTouches) up('t'+t.identifier); },{passive:false});
+    el.addEventListener('pointerdown',e=>{
+      if(nativeTouch&&e.pointerType==='touch') return;
+      e.preventDefault();
+      try{ el.setPointerCapture(e.pointerId); }catch(_){}
+      down('p'+e.pointerId,e.clientX,e.clientY);
+    });
+    el.addEventListener('pointermove',e=>{ if(!(nativeTouch&&e.pointerType==='touch')) mv('p'+e.pointerId,e.clientX,e.clientY); });
+    el.addEventListener('pointerup',e=>up('p'+e.pointerId));
+    el.addEventListener('lostpointercapture',e=>up('p'+e.pointerId));
+  }
+}
 window.addEventListener('blur',()=>{
   for(const k in keys) keys[k]=false;
   for(const contactId of [...virtualContacts.keys()]) releaseVirtualContact(contactId);
+  for(const r of stickResets) r();
   if(state==='play') state='pause';
   if(scrapeGain) scrapeGain.gain.value=0;
 });
@@ -1557,7 +1612,7 @@ function drawHUD(){
   const mm=Math.floor(runTime/60), ss=Math.floor(runTime%60);
   cx.fillText('난이도 '+('◆'.repeat(Math.ceil(currentLevel/6)))+('◇'.repeat(5-Math.ceil(currentLevel/6)))+'   '+(mm<10?'0':'')+mm+':'+(ss<10?'0':'')+ss+'   소음 '+noiseCnt+'회   기상 '+wakeCnt+'회   클립 '+clipScore, VW-24, 34);
   cx.fillStyle='rgba(174,185,230,0.6)'; cx.font='12px sans-serif';
-  cx.fillText(TOUCH_UI?'터치 패드 조작 · 상단 메뉴에서 재정비·일시정지': 'R 체크포인트 재시작 · P 일시정지 · M 음소거', VW-24, 54);
+  cx.fillText(TOUCH_UI?'터치 스틱 조작 · 상단 메뉴에서 재정비·일시정지': 'R 체크포인트 재시작 · P 일시정지 · M 음소거', VW-24, 54);
   // 그립 상태
   drawGripChip(carriers[0], 24, VH-46);
   drawGripChip(carriers[1], VW-224, VH-46);
@@ -1652,14 +1707,14 @@ function drawTitle(){
   cx.textAlign='left'; cx.font='bold 17px sans-serif';
   cx.fillStyle='#4f8ef7'; cx.fillText('🟦 뒷사람',VW/2-380,470);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText(TOUCH_UI?'왼쪽 파란 패드     ◀▶ 이동     ▲ 점프     ▼ 숙이기     그립 잡기·놓기':'A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
+  cx.fillText(TOUCH_UI?'왼쪽 파란 스틱     좌우로 밀어 이동 · 위로 점프 · 아래로 숙이기 · 그립 버튼':'A / D 이동     W 점프     S 숙이기     F 그립 잡기·놓기',VW/2-380,500);
   cx.fillStyle='#3ec9a7'; cx.font='bold 17px sans-serif'; cx.fillText('🟩 앞사람',VW/2-380,540);
   cx.fillStyle='#dfe6ff'; cx.font='15px sans-serif';
-  cx.fillText(TOUCH_UI?'오른쪽 초록 패드   ◀▶ 이동     ▲ 점프     ▼ 숙이기     그립 잡기·놓기':'← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 또는 L 그립 잡기·놓기',VW/2-380,570);
+  cx.fillText(TOUCH_UI?'오른쪽 초록 스틱   좌우로 밀어 이동 · 위로 점프 · 아래로 숙이기 · 그립 버튼':'← / → 이동     ↑ 점프     ↓ 숙이기     Shift(양쪽) 또는 L 그립 잡기·놓기',VW/2-380,570);
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.6.2 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
+  cx.fillText('v0.6.3 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
