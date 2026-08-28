@@ -1993,9 +1993,10 @@ function netHttpBase(){ const v=netServerUrl(); return v?v.replace(/^ws/,'http')
 function netWsBase(){ const v=netServerUrl(); return v?v.replace(/^http/,'ws'):null; }
 function lobbyMsg(m,bad){ const e=lobbyEl('lobbyMsg'); e.textContent=m||''; e.style.color=bad?'#ff8d8d':'#9fe8b6'; }
 let lobbyPoll=null;
+const DEFAULT_WS='wss://dont-drop-him-online.bobbyno748.workers.dev';
 function openLobby(){
   lobbyEl('lobby').style.display='flex';
-  lobbyEl('wsUrl').value=localStorage.getItem('ddh_ws')||'';
+  lobbyEl('wsUrl').value=localStorage.getItem('ddh_ws')||DEFAULT_WS;
   startLobbyPoll();
 }
 function closeLobby(){ lobbyEl('lobby').style.display='none'; stopLobbyPoll(); }
