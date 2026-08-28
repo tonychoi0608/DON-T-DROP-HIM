@@ -15,7 +15,7 @@ T = {
   '부장님이 잠드셨다 — 30개 고유 맵 캠페인': "DON’T DROP HIM — 30 unique map campaign",
   '부장님이 잠드셨다': "DON’T DROP HIM",
   '회식엔딩': 'AFTER-WORK',
-  '30개 전부 다른 맵. 지형·배치·이벤트 위치까지 전부 다릅니다.': 'All 30 maps are different — terrain, layout, even event positions.',
+  '만취해 잠든 부장님을 둘이서 들고 집까지 배달하는 눈치 게임. 깨우는 순간, 월요일이 지옥이 된다.': 'Carry your blackout-drunk boss home without waking him. The moment he wakes, Monday becomes hell.',
   'v0.7.0 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인': 'v0.7.0 — 420m to 900m, 30 unique maps, PC & mobile',
   '[V] 실제 마이크 ': '[V] Real microphone ',
   ' (선택 기능 · 기본 OFF)': ' (optional · default OFF)',
