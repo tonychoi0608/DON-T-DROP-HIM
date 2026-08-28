@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.6.3</title>
+<title>부장님이 잠드셨다 v0.7.0</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -65,6 +65,32 @@
     .stick{width:110px;height:110px}.stickKnob{width:48px;height:48px;margin:-24px 0 0 -24px}
     .touchBtn{width:42px;height:42px;border-radius:12px;font-size:17px}.gripBtn{width:52px;height:52px;font-size:11px}
   }
+
+  /* ---- 온라인 협동 로비 ---- */
+  #onlineBtn{position:fixed;right:18px;bottom:18px;z-index:25;display:none;padding:12px 20px;
+    border-radius:24px;border:1px solid rgba(124,108,255,.7);background:rgba(24,20,62,.92);color:#cfc6ff;
+    font:800 15px/1 system-ui;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+  #onlineBtn:hover{background:rgba(52,44,110,.95)}
+  #lobby{position:fixed;inset:0;z-index:40;display:none;align-items:center;justify-content:center;
+    background:rgba(5,8,20,.78);backdrop-filter:blur(3px)}
+  #lobbyCard{width:min(420px,92vw);max-height:88vh;overflow:auto;background:#141a36;border:1px solid #39415c;
+    border-radius:16px;padding:22px;color:#dfe6ff;font:500 14px/1.5 system-ui;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  #lobbyCard h2{margin:0 0 14px;font-size:19px}
+  #lobbyCard label{display:block;margin:0 0 4px;font-size:12px;color:#8b96c4}
+  #lobbyCard input{width:100%;box-sizing:border-box;margin:0 0 10px;padding:10px 12px;border-radius:10px;
+    border:1px solid #39415c;background:#0c1128;color:#fff;font:600 14px/1 system-ui}
+  .lrow{display:flex;gap:8px;margin:0 0 10px}
+  .lrow input{margin:0;flex:1}
+  .lbtn{padding:10px 16px;border-radius:10px;border:1px solid #4a5378;background:#232c52;color:#fff;
+    font:800 14px/1 system-ui;cursor:pointer;flex:1}
+  .lbtn:disabled{opacity:.45;cursor:default}
+  .lbtn.main{background:#4a3df0;border-color:#6a5dff;width:100%}
+  .lbtn.ghost{background:transparent;border-color:#39415c;color:#8b96c4;width:100%;margin-top:8px}
+  .lbtn.sel{outline:2px solid #7dffa8;background:#1d4436}
+  #codeShow{font:900 34px/1.2 system-ui;text-align:center;letter-spacing:8px;color:#ffd45e;margin:4px 0 12px}
+  .pRow{padding:7px 10px;background:#0c1128;border-radius:8px;margin:0 0 6px;font-weight:700}
+  .pRow.dim{color:#8b96c4;font-weight:500}
+  #lobbyMsg{min-height:20px;margin:8px 0 0;font-size:13px;color:#9fe8b6}
 </style>
 <div id="wrap"><canvas id="cv" width="1280" height="720"></canvas></div>
 <div id="touchControls" aria-label="모바일 게임 조작부">
@@ -91,10 +117,30 @@
     <button class="touchBtn" data-menu-index="2"></button>
   </div>
 </div>
+<button id="onlineBtn">🌐 온라인 협동 [3]</button>
+<div id="lobby">
+  <div id="lobbyCard">
+    <h2>🌐 온라인 협동</h2>
+    <div id="lobbySetup">
+      <label>중계 서버 주소 (Cloudflare Worker)</label>
+      <input id="wsUrl" placeholder="wss://dont-drop-him-online.계정명.workers.dev" autocomplete="off" spellcheck="false">
+      <div class="lrow"><button id="btnMake" class="lbtn main">방 만들기</button></div>
+      <div class="lrow"><input id="roomCode" placeholder="방 코드" maxlength="8" autocomplete="off" spellcheck="false"><button id="btnJoin" class="lbtn">입장</button></div>
+    </div>
+    <div id="lobbyRoom" style="display:none">
+      <div id="codeShow"></div>
+      <div id="playersBox"></div>
+      <div class="lrow"><button id="roleBack" class="lbtn">🟦 뒷사람</button><button id="roleFront" class="lbtn">🟩 앞사람</button></div>
+      <button id="btnStart" class="lbtn main" disabled>게임 시작</button>
+    </div>
+    <div id="lobbyMsg"></div>
+    <button id="btnLeave" class="lbtn ghost">닫기 / 나가기</button>
+  </div>
+</div>
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.6.3
+   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.7.0
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -111,8 +157,14 @@ document.body.classList.toggle('touch',TOUCH_UI);
 /* ---------------- 입력 ---------------- */
 const keys = {}, pressed = {};
 const GAMEKEYS = new Set(['KeyA','KeyD','KeyW','KeyS','KeyF','ArrowLeft','ArrowRight','ArrowUp','ArrowDown',
-  'ShiftLeft','ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyV','KeyP','KeyG','KeyI','Escape','Enter','Digit1','Digit2','KeyK','Digit9','Digit0','Space']);
+  'ShiftLeft','ShiftRight','KeyL','KeyR','KeyT','KeyM','KeyV','KeyP','KeyG','KeyI','Escape','Enter','Digit1','Digit2','Digit3','KeyK','Digit9','Digit0','Space']);
 function setInput(code,down){
+  if(net.on&&!net._inj&&state!=='title'){
+    if(net.host){ if(net.peerCodes&&net.peerCodes.has(code)) return; } // 호스트: 상대 역할 키 로컬 차단
+    else if(net.myCodes&&net.myCodes.has(code)){
+      if(!!keys[code]!==!!down) netSendInput(code,down);               // 게스트: 내 키를 서버로
+    }
+  }
   if(down){ if(!keys[code]) pressed[code]=true; keys[code]=true; ensureAudio(); }
   else keys[code]=false;
 }
@@ -225,6 +277,7 @@ window.addEventListener('blur',()=>{
   for(const contactId of [...virtualContacts.keys()]) releaseVirtualContact(contactId);
   for(const r of stickResets) r();
   if(state==='play') state='pause';
+  if(net.on&&net.host) netSend(netSnapshot()); // 게스트에게 일시정지 즉시 전파
   if(scrapeGain) scrapeGain.gain.value=0;
 });
 let clickPt = null;
@@ -1719,7 +1772,7 @@ function drawTitle(){
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.6.3 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
+  cx.fillText('v0.7.0 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
@@ -1857,7 +1910,15 @@ function syncTouchMenu(){
   menu.classList.toggle('visible',items.length>0);
 }
 function metaInput(){
+  if(net.on&&!net.host&&state!=='title'){
+    // 온라인 게스트: 진행 제어는 방장 몸. 음소거/마이크/나가기만.
+    if(pressed['KeyM']){ muted=!muted; if(master) master.gain.value=muted?0:0.5; }
+    if(pressed['KeyV']) toggleMic();
+    if(pressed['Escape']){ toast('방에서 나감'); netLeave(); }
+    return;
+  }
   if(state==='title'){
+    if(pressed['Digit3']&&!net.on) openLobby();
     let m=null;
     if(pressed['Digit1']) m='solo';
     if(pressed['Digit2']) m='duo';
@@ -1874,14 +1935,14 @@ function metaInput(){
   } else if(state==='pause'){
     if(pressed['KeyP']) state='play';
     if(pressed['KeyR']){ manualResetCnt++; respawn(false); state='play'; }
-    if(pressed['Escape']) state='title';
+    if(pressed['Escape']){ state='title'; if(net.ws) netLeave(); }
   } else if(state==='wake'){
     if(pressed['KeyR']){ respawn(); state='play'; }
     if(pressed['KeyT']) startLevel(currentLevel);
   } else if(state==='clear'){
     if(pressed['Enter']&&currentLevel<LEVELS.length) startLevel(currentLevel+1);
     if(pressed['KeyT']) campaignComplete?startGame(mode):startLevel(currentLevel);
-    if(pressed['Escape']) state='title';
+    if(pressed['Escape']){ state='title'; if(net.ws) netLeave(); }
   }
   if(pressed['KeyM']){ muted=!muted; if(master) master.gain.value=muted?0:0.5; }
   if(pressed['KeyV']) toggleMic();
@@ -1896,6 +1957,182 @@ carriers=[
 resetBottles();
 { const f=carriers[1].anchor(), b=carriers[0].anchor(); buildBoss(f.x,f.y,b.x,b.y); }
 camX=0;
+
+/* ---------------- 온라인 협동 (Cloudflare Worker + Durable Object 중계) ----------------
+   호스트 권위: 방장이 물리를 돌리고 게스트는 입력을 보내고 스냅샷(15Hz)을 받아 그린다. */
+const NET_CODES={
+  front:['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','ShiftLeft','ShiftRight','KeyL'],
+  back:['KeyA','KeyD','KeyW','KeyS','KeyF']
+};
+let net={on:false,ws:null,host:false,role:null,code:'',myCodes:null,peerCodes:null,_inj:false,_lvl:false,
+  sendT:0,pingT:0,snap:null,peerHere:false,roster:null};
+const lobbyEl=id=>document.getElementById(id);
+function netServerUrl(){
+  let v=(lobbyEl('wsUrl').value||'').trim();
+  if(!v) return null;
+  v=v.replace(/\/+$/,'');
+  if(!/^(wss?|https?):\/\//.test(v)) v='wss://'+v;
+  return v;
+}
+function netHttpBase(){ const v=netServerUrl(); return v?v.replace(/^ws/,'http'):null; }
+function netWsBase(){ const v=netServerUrl(); return v?v.replace(/^http/,'ws'):null; }
+function lobbyMsg(m,bad){ const e=lobbyEl('lobbyMsg'); e.textContent=m||''; e.style.color=bad?'#ff8d8d':'#9fe8b6'; }
+function openLobby(){ lobbyEl('lobby').style.display='flex'; lobbyEl('wsUrl').value=localStorage.getItem('ddh_ws')||''; }
+function closeLobby(){ lobbyEl('lobby').style.display='none'; }
+async function netCreateRoom(){
+  const base=netHttpBase(); if(!base){ lobbyMsg('서버 주소를 먼저 입력하세요 (wss://…workers.dev)',1); return; }
+  localStorage.setItem('ddh_ws',lobbyEl('wsUrl').value.trim());
+  lobbyMsg('방 만드는 중…');
+  try{ const r=await fetch(base+'/new'); const d=await r.json(); netConnect(d.code); }
+  catch(e){ lobbyMsg('서버에 연결할 수 없습니다: '+e.message,1); }
+}
+function netJoinRoom(){
+  const code=(lobbyEl('roomCode').value||'').trim().toUpperCase();
+  if(code.length<4){ lobbyMsg('방 코드를 입력하세요',1); return; }
+  if(!netWsBase()){ lobbyMsg('서버 주소를 먼저 입력하세요',1); return; }
+  localStorage.setItem('ddh_ws',lobbyEl('wsUrl').value.trim());
+  netConnect(code);
+}
+function netConnect(code){
+  netDisconnect();
+  lobbyMsg('접속 중… ('+code+')');
+  let ws;
+  try{ ws=new WebSocket(netWsBase()+'/ws/'+code); }
+  catch(e){ lobbyMsg('주소가 올바르지 않습니다',1); return; }
+  net.ws=ws; net.code=code;
+  ws.onopen=()=>{ lobbyEl('lobbySetup').style.display='none'; lobbyEl('lobbyRoom').style.display='block';
+    lobbyEl('codeShow').textContent=code; lobbyMsg('접속됨 · 친구에게 코드를 알려주세요'); };
+  ws.onmessage=netMsg;
+  ws.onclose=()=>{ net.ws=null;
+    if(net.on){ toast('🔌 연결이 끊어졌습니다'); netLeave(); }
+    else if(lobbyEl('lobby').style.display==='flex'){ lobbyEl('lobbySetup').style.display='block';
+      lobbyEl('lobbyRoom').style.display='none'; lobbyMsg('연결이 끊어졌습니다',1); } };
+  ws.onerror=()=>lobbyMsg('접속 실패 — 서버 주소와 방 코드를 확인하세요',1);
+}
+function netDisconnect(){
+  if(net.ws){ const w=net.ws; net.ws=null; try{ w.onclose=null; w.close(); }catch(_){} }
+  net.on=false; net.host=false; net.role=null; net.peerHere=false; net.snap=null;
+}
+function netLeave(){ netDisconnect(); state='title'; closeLobby(); }
+function netSend(o){ if(net.ws&&net.ws.readyState===1){ try{ net.ws.send(JSON.stringify(o)); }catch(_){}} }
+function netSendInput(code,down){ netSend({t:'relay',i:[code,down?1:0]}); }
+function netMsg(e){
+  let d; try{ d=JSON.parse(e.data); }catch(_){ return; }
+  if(d.t==='roster'){
+    net.roster=d; net.host=!!d.host;
+    const me=d.players.find(p=>p.id===d.you);
+    net.role=me?me.role:null;
+    renderLobby(d);
+  } else if(d.t==='start'){
+    closeLobby(); netBegin(d.level||1,d.mi|0);
+  } else if(d.t==='peer_left'){
+    if(net.on){ toast('👋 상대가 나갔습니다'); netLeave(); }
+    else lobbyMsg('상대가 나갔습니다 — 대기 중…',1);
+  } else if(d.t==='relay'){
+    if(d.i){ if(net.host&&net.on){ net._inj=true; setInput(d.i[0],!!d.i[1]); net._inj=false; } }
+    else if(d.s){ if(!net.host) net.snap=d.s; }
+    else if(d.ev&&d.ev[0]==='toast'&&!net.host) __toast(d.ev[1]);
+  }
+}
+function renderLobby(d){
+  const roleName=r=>r==='front'?'🟩 앞사람':r==='back'?'🟦 뒷사람':'역할 미정';
+  lobbyEl('playersBox').innerHTML=d.players.map(p=>
+    '<div class="pRow">'+(p.host?'👑 ':'')+'플레이어 '+p.id+(p.id===d.you?' (나)':'')+' — '+roleName(p.role)+'</div>').join('')
+    +(d.players.length<2?'<div class="pRow dim">상대 대기 중… 방 코드: '+net.code+'</div>':'');
+  net.peerHere=d.players.length===2;
+  const other=d.players.find(p=>p.id!==d.you);
+  lobbyEl('roleBack').disabled=!!(other&&other.role==='back');
+  lobbyEl('roleFront').disabled=!!(other&&other.role==='front');
+  lobbyEl('roleBack').classList.toggle('sel',net.role==='back');
+  lobbyEl('roleFront').classList.toggle('sel',net.role==='front');
+  const ready=net.peerHere&&d.players.every(p=>p.role)&&d.players[0].role!==d.players[1].role;
+  const sb=lobbyEl('btnStart');
+  sb.style.display=net.host?'block':'none';
+  sb.disabled=!ready;
+  sb.textContent=ready?'게임 시작':'2명이 역할을 고르면 시작';
+  if(!net.host) lobbyMsg(net.peerHere?(ready?'방장이 시작하길 기다리는 중…':'역할을 선택하세요'):'대기 중…');
+}
+function netBegin(level,mi){
+  net.on=true; net.sendT=0; net.snap=null;
+  net.myCodes=new Set(NET_CODES[net.role]||[]);
+  net.peerCodes=new Set(NET_CODES[net.role==='front'?'back':'front']||[]);
+  mode='duo'; campaignComplete=false;
+  startLevel(level);
+  mission=MISSIONS[mi%MISSIONS.length];
+  toast(net.host?'🌐 온라인 협동 시작 — 나는 '+(net.role==='front'?'앞사람':'뒷사람')+' (방장)':'🌐 온라인 협동 시작 — 나는 '+(net.role==='front'?'앞사람':'뒷사람'));
+}
+const nr1=v=>Math.round(v*10)/10;
+function netSnapshot(){
+  return {t:'relay',s:{
+    st:state,lv:currentLevel,mi:MISSIONS.indexOf(mission),cp:cpIdx,
+    m:nr1(meter),rt:nr1(runTime),cam:nr1(camX),sh:nr1(shake),ck:nr1(clearT),wa:nr1(wakeAnimT),
+    b:boss?boss.list.map(p=>[nr1(p.x),nr1(p.y)]):null,
+    c:carriers.map(c=>[nr1(c.x),nr1(c.y),nr1(c.vx),c.facing,c.crouch?1:0,c.grip?1:0,nr1(c.walkPh),nr1(c.stretchShown||0),c.regrabHint?1:0]),
+    tx:[taxi.entered?1:0,taxi.success?1:0,taxi.failed?1:0,taxi.gone?1:0,nr1(taxi.driveT)],
+    ct:[catZone.spooked?1:0,nr1(catZone.runX)],tr:trash.spilled?1:0,
+    bo:bottles.map(b=>[nr1(b.x),b.k?1:0,nr1(b.rot||0),b.done?1:0]),
+    sz:silentZone.active?silentZone.index:-1,
+    gi:gradeInfo,wl:lastWakeLine,wc:wakeCnt,nc:noiseCnt,clip:clipScore,ca:campaignComplete?1:0
+  }};
+}
+function netApplySnap(rdt){
+  const s=net.snap; if(!s||!s.c) return;
+  if(s.lv!==currentLevel) startLevel(s.lv);
+  if(s.mi>=0) mission=MISSIONS[s.mi];
+  if(s.st!==state) state=s.st;
+  meter=s.m; runTime=s.rt; camX=s.cam; shake=s.sh; cpIdx=s.cp; clearT=s.ck; wakeAnimT=s.wa;
+  wakeCnt=s.wc; noiseCnt=s.nc; clipScore=s.clip; campaignComplete=!!s.ca;
+  if(s.gi) gradeInfo=s.gi;
+  if(s.wl) lastWakeLine=s.wl;
+  if(s.b&&boss){
+    const L=Math.min(boss.list.length,s.b.length);
+    for(let i=0;i<L;i++){ const p=boss.list[i],t=s.b[i];
+      p.x+=(t[0]-p.x)*0.5; p.y+=(t[1]-p.y)*0.5; p.px=p.x; p.py=p.y; }
+  }
+  const cl=Math.min(carriers.length,s.c.length);
+  for(let i=0;i<cl;i++){ const c=carriers[i],t=s.c[i];
+    c.x+=(t[0]-c.x)*0.5; c.y+=(t[1]-c.y)*0.5; c.vx=t[2]; c.facing=t[3]; c.crouch=!!t[4]; c.grip=!!t[5];
+    c.walkPh=t[6]; c.stretchShown=t[7]; c.regrabHint=!!t[8]; }
+  taxi.entered=!!s.tx[0]; taxi.success=!!s.tx[1]; taxi.failed=!!s.tx[2]; taxi.gone=!!s.tx[3]; taxi.driveT=s.tx[4];
+  catZone.spooked=!!s.ct[0]; catZone.runX=s.ct[1]; trash.spilled=!!s.tr;
+  if(s.bo){ const bl=Math.min(bottles.length,s.bo.length);
+    for(let i=0;i<bl;i++){ const b=bottles[i],t=s.bo[i]; b.x=t[0]; b.k=!!t[1]; b.rot=t[2]; b.done=!!t[3]; } }
+  if(s.sz>=0&&!silentZone.active){
+    silentZone.active=true; silentZone.index=s.sz; silentZone.t=0; silentZone.hitCd=0; silentZone.pulseDone=false;
+    const ev=SILENT_EVENTS[s.sz%SILENT_EVENTS.length]; silentZone.frontMsg=ev.front; silentZone.backMsg=ev.back;
+  } else if(s.sz<0&&silentZone.active) silentZone.active=false;
+  if(silentZone.active) silentZone.t+=rdt;
+}
+function netTick(rdt){
+  const btn=document.getElementById('onlineBtn');
+  const show=state==='title'&&!net.on;
+  const cur=btn.style.display==='block';
+  if(cur!==show) btn.style.display=show?'block':'none';
+  if(!net.ws){ if(net.on) netLeave(); return; }
+  net.pingT+=rdt; if(net.pingT>20){ net.pingT=0; netSend({t:'ping'}); }
+  if(!net.on) return;
+  if(net.host){
+    net.sendT+=rdt;
+    if(net.sendT>=1/15&&state!=='title'){ net.sendT=0; netSend(netSnapshot()); }
+  } else netApplySnap(rdt);
+}
+/* 훅: 호스트 toast를 게스트로 중계(레벨 시작 토스트는 양쪽에서 자체 생성되므로 제외) */
+const __toast=toast;
+toast=function(m){ __toast(m); if(net.on&&net.host&&!net._lvl) netSend({t:'relay',ev:['toast',m]}); };
+const __startLevel=startLevel;
+startLevel=function(l){ net._lvl=true; __startLevel(l); net._lvl=false; };
+/* 로비 이벤트 바인딩 */
+lobbyEl('btnMake').onclick=netCreateRoom;
+lobbyEl('btnJoin').onclick=netJoinRoom;
+lobbyEl('roomCode').addEventListener('keydown',e=>{ if(e.key==='Enter') netJoinRoom(); e.stopPropagation(); });
+lobbyEl('wsUrl').addEventListener('keydown',e=>e.stopPropagation());
+lobbyEl('roleBack').onclick=()=>netSend({t:'role',role:'back'});
+lobbyEl('roleFront').onclick=()=>netSend({t:'role',role:'front'});
+lobbyEl('btnStart').onclick=()=>netSend({t:'start',level:1,mi:(Math.random()*MISSIONS.length)|0});
+lobbyEl('btnLeave').onclick=()=>{ netDisconnect(); closeLobby();
+  lobbyEl('lobbySetup').style.display='block'; lobbyEl('lobbyRoom').style.display='none'; lobbyMsg(''); };
+document.getElementById('onlineBtn').onclick=openLobby;
+
 function frame(t){
   requestAnimationFrame(frame);
   const rdt=Math.min(0.05,(t-lastT)/1000||0.016); lastT=t;
@@ -1905,7 +2142,7 @@ function frame(t){
   let n=0;
   while(acc>=FDT && n<4){
     metaInput();
-    if(state==='play') update(FDT);
+    if(state==='play'){ if(!(net.on&&!net.host)) update(FDT); }
     else if(state==='title'){
       // 타이틀 뒤에서 부장님이 살아있는 물리로 잠자는 데모
       for(let s=0;s<SUB;s++) stepBossPhysics();
@@ -1918,6 +2155,7 @@ function frame(t){
     acc-=FDT; n++;
   }
   syncTouchMenu();
+  netTick(rdt);
   draw(rdt);
 }
 requestAnimationFrame(frame);
