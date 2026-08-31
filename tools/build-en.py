@@ -11,12 +11,12 @@ DST = os.path.join(os.path.dirname(__file__), '..', 'en.html')
 
 T = {
   # ---- 메타/타이틀 ----
-  '부장님이 잠드셨다 v0.7.0': "DON’T DROP HIM v0.7.0",
+  '부장님이 잠드셨다 v0.7.1': "DON’T DROP HIM v0.7.1",
   '부장님이 잠드셨다 — 30개 고유 맵 캠페인': "DON’T DROP HIM — 30 unique map campaign",
   '부장님이 잠드셨다': "DON’T DROP HIM",
   '회식엔딩': 'AFTER-WORK',
   '만취해 잠든 부장님을 둘이서 들고 집까지 배달하는 눈치 게임. 깨우는 순간, 월요일이 지옥이 된다.': 'Carry your blackout-drunk boss home without waking him. The moment he wakes, Monday becomes hell.',
-  'v0.7.0 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인': 'v0.7.0 — 420m to 900m, 30 unique maps, PC & mobile',
+  'v0.7.1 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인': 'v0.7.1 — 420m to 900m, 30 unique maps, PC & mobile',
   '[V] 실제 마이크 ': '[V] Real microphone ',
   ' (선택 기능 · 기본 OFF)': ' (optional · default OFF)',
   '🌐 English': '🌐 한국어',

@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>부장님이 잠드셨다 v0.7.0</title>
+<title>부장님이 잠드셨다 v0.7.1</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0b1026;overflow:hidden;
     overscroll-behavior:none;font-family:"Pretendard Variable",Pretendard,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif}
@@ -160,7 +160,7 @@
 <script>
 "use strict";
 /* ============================================================
-   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.7.0
+   부장님이 잠드셨다 — 30개 고유 맵 캠페인 v0.7.1
    1인(양손 연습) / 2인(키보드 분할) / 모바일 터치 · 커스텀 Verlet 물리
    ============================================================ */
 const cv = document.getElementById('cv'), cx = cv.getContext('2d');
@@ -543,11 +543,10 @@ function addObstacleGroup(x,kind,rng,level,hz){
     for(let i=0;i<3;i++){ const hh=H(h+(2-i)*9+6); box(x+i*34,G_Y-hh,30,hh,'level'); }
   }
 }
-function buildLevelWorld(level){
-  activeMap=makeMapSpec(level);
-  const R=activeMap.recipe;
-  WORLD=activeMap.length; GOAL_CX=activeMap.goalCenter; GOAL_X0=activeMap.goalX0; GOAL_X1=activeMap.goalX1;
-  CHECKPOINTS=activeMap.checkpoints;
+/* 그룹 폭(대략, x 기준 스팬) — 겹침 방지 배치에 사용 */
+const KIND_W=[98,110,100,106,112,104,96,150,132,132,128,156,132,98];
+
+function buildObstacles(level,R,seed){
   solids.length=0; box(-300,G_Y,WORLD+600,320,'ground');
   const reserved=[
     [0,620],[GOAL_X0-400,WORLD],
@@ -559,19 +558,20 @@ function buildLevelWorld(level){
   const x0=640, x1=GOAL_X0-420;
   const slots=[]; for(let x=x0;x<x1;x+=40) if(!blocked(x)) slots.push(x);
   const freePx=slots.length*40;
-  const rng=mapRng(activeMap.seed);
+  const rng=mapRng(seed);
   const wfn=LAYOUT_W[R.lay]||LAYOUT_W.even;
   const waveK=3+level%3;
   /* 밀도는 실제 남은 공간에서 계산: 목표 간격이 레벨 1의 160px에서 30의 96px까지 줄어든다 */
   const sp=Math.max(96,162-level*2.3)*(R.lay==='rhythm'?0.82:1);
   const groups=clamp(Math.round(freePx/sp),8,R.g+18);
   activeMap.hazardGroups=groups;
-  const minGap=Math.max(92,sp*0.6);
-  const chosen=[];
+  const GAP=74; // 그룹 사이 보행 여유(캐리어 폭 26 + 착지·숙이기 공간) — 그룹 겹침 원천 차단
+  const iv=[], picks=[];
   for(let n=0;n<groups;n++){
+    const kind=R.kinds[n%R.kinds.length], gw=KIND_W[kind]||130;
     let total=0;
     const w=slots.map(x=>{
-      if(chosen.some(c=>Math.abs(c-x)<minGap)) return 0;
+      if(iv.some(z=>x+gw+GAP>z[0]&&x<z[1]+GAP)) return 0;
       const t=(x-x0)/(x1-x0);
       const v=Math.max(0,wfn(t,waveK)); total+=v; return v;
     });
@@ -580,10 +580,73 @@ function buildLevelWorld(level){
     for(let i=0;i<slots.length;i++){ r-=w[i]; if(r<=0&&w[i]>0){ pick=slots[i]; break; } }
     if(pick<0){ for(let i=slots.length-1;i>=0;i--) if(w[i]>0){ pick=slots[i]; break; } }
     if(pick<0) break;
-    chosen.push(pick);
+    iv.push([pick,pick+gw]); picks.push({x:pick,kind});
   }
-  chosen.sort((a,b)=>a-b);
-  for(let i=0;i<chosen.length;i++) addObstacleGroup(chosen[i],R.kinds[i%R.kinds.length],rng,level,R.hz);
+  picks.sort((a,b)=>a.x-b.x);
+  for(const p of picks) addObstacleGroup(p.x,p.kind,rng,level,R.hz);
+}
+
+/* 통과 가능성 검사: 10px 열 그리드에서 설 수 있는 면들을 만들고,
+   전진 BFS로 출발점→골인 지점 도달 여부를 판정한다.
+   점프 100px(운반 기준 105px에 여유), 스텝업 27px, 숙임 통과 43px. */
+function mapPassable(){
+  const STEP=10, JUMP=100, MINHEAD=43, HALF=14;
+  const xs0=300, xs1=GOAL_X0-40;
+  const cols=[];
+  for(let x=xs0;x<=xs1;x+=STEP){
+    const tops=[G_Y];
+    for(let i=1;i<solids.length;i++){ const s=solids[i]; if(x>s.x-HALF&&x<s.x+s.w+HALF) tops.push(s.y); }
+    const sur=[];
+    for(const t of tops){
+      let head=1e9, buried=false;
+      for(let i=1;i<solids.length;i++){
+        const s=solids[i];
+        if(x<=s.x-HALF||x>=s.x+s.w+HALF) continue;
+        if(t>s.y+1&&t<s.y+s.h-1){ buried=true; break; }
+        const b=s.y+s.h;
+        if(b<=t+1){ const hh=t-b; if(hh<head) head=hh; }
+      }
+      if(!buried&&head>=MINHEAD&&!sur.some(o=>Math.abs(o.y-t)<1)) sur.push({y:t,head});
+    }
+    cols.push(sur);
+  }
+  const n=cols.length;
+  if(!n||!cols[0].length) return false;
+  const vis=cols.map(c=>c.map(()=>false));
+  const q=[];
+  for(let j=0;j<cols[0].length;j++) if(Math.abs(cols[0][j].y-G_Y)<1){ vis[0][j]=true; q.push([0,j]); }
+  while(q.length){
+    const cur=q.pop(), i=cur[0], j=cur[1], a=cols[i][j];
+    if(i===n-1) return true;
+    const ni=i+1;
+    for(let k=0;k<cols[ni].length;k++){
+      if(vis[ni][k]) continue;
+      const b=cols[ni][k];
+      const rise=a.y-b.y;                    // 양수 = 올라감
+      if(rise>JUMP) continue;                // 점프로도 못 오름
+      if(rise>27&&a.head<60) continue;       // 낮은 천장 밑에서는 점프 불가(스텝업만)
+      vis[ni][k]=true; q.push([ni,k]);
+    }
+  }
+  return false;
+}
+
+function buildLevelWorld(level){
+  activeMap=makeMapSpec(level);
+  const R=activeMap.recipe;
+  WORLD=activeMap.length; GOAL_CX=activeMap.goalCenter; GOAL_X0=activeMap.goalX0; GOAL_X1=activeMap.goalX1;
+  CHECKPOINTS=activeMap.checkpoints;
+  /* 생성 → 검증 → 실패 시 시드 회전 재생성(결정적: 모두가 같은 최종 맵을 본다) */
+  let seed=activeMap.seed, ok=false;
+  for(let attempt=0;attempt<12;attempt++){
+    buildObstacles(level,R,seed);
+    if(mapPassable()){ ok=true; activeMap.buildAttempts=attempt+1; break; }
+    seed=(seed^Math.imul(attempt+1,0x85EBCA6B))>>>0;
+  }
+  if(!ok){ // 최후 안전장치: 천장류 제거 후 재검증
+    for(let i=solids.length-1;i>=1;i--){ const s=solids[i]; if(s.y+s.h<G_Y-2) solids.splice(i,1); }
+    activeMap.buildAttempts=99;
+  }
   activeMap.obstacleCount=solids.length-1;
   activeMap.signature=solids.slice(1).map(s=>[Math.round(s.x),Math.round(s.y),s.w,s.h,s.tag].join(':')).join('|');
 }
@@ -1797,7 +1860,7 @@ function drawTitle(){
   cx.fillStyle='#8b96c4'; cx.font='13px sans-serif'; cx.textAlign='center';
   cx.fillText('간판 아래선 숙이고(대신 부장님이 끌린다), 턱에선 둘이 박자 맞춰 점프. 고양이 앞에선 천천히.',VW/2,600);
   cx.fillStyle='rgba(139,150,196,0.7)';
-  cx.fillText('v0.7.0 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
+  cx.fillText('v0.7.1 — 420m부터 900m까지, 30개 고유 지형 PC·모바일 캠페인',VW/2,646);
   cx.fillStyle=micEnabled?'#7dffa8':'#8b96c4';
   cx.fillText('[V] 실제 마이크 '+micStatus+' (선택 기능 · 기본 OFF)',VW/2,674);
 }
